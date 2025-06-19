@@ -1,0 +1,132 @@
+<!--index.wxml-->
+<view class="container">
+  <!-- 顶部状态栏 -->
+  <view class="status-bar">
+    <view class="date-info">
+      <text class="date">{{currentDate}}</text>
+      <text class="practice-time text-secondary">今日练习 {{todayPracticeTime}} 分钟</text>
+    </view>
+    
+    <!-- 设置按钮 -->
+    <view class="settings-btn" bindtap="goToSettings">
+      <text class="icon">⚙️</text>
+    </view>
+  </view>
+
+  <!-- 句子显示区域 -->
+  <view class="sentence-area card">
+    <view class="sentence-header">
+      <text class="sentence-level">{{currentSentence.level}}</text>
+      <text class="sentence-count">{{currentIndex + 1}}/{{totalSentences}}</text>
+    </view>
+    
+    <view class="sentence-content">
+      <text class="sentence-text">{{currentSentence.content}}</text>
+    </view>
+    
+    <!-- 翻译（可展开） -->
+    <view class="translation" wx:if="{{showTranslation}}">
+      <text class="translation-text text-secondary">{{currentSentence.translation}}</text>
+    </view>
+    
+    <!-- 展开翻译按钮 -->
+    <view class="expand-btn" bindtap="toggleTranslation">
+      <text class="text-secondary">{{showTranslation ? '收起' : '显示'}}翻译</text>
+    </view>
+  </view>
+
+  <!-- 波形可视化区域 -->
+  <view class="wave-container">
+    <canvas 
+      canvas-id="waveCanvas" 
+      id="waveCanvas"
+      class="wave-canvas"
+      style="width: {{canvasWidth}}px; height: {{canvasHeight}}px;"
+    ></canvas>
+    
+    <!-- 录音时长显示 -->
+    <view class="record-time" wx:if="{{isRecording || recordDuration > 0}}">
+      <text>{{recordDurationText}}</text>
+    </view>
+  </view>
+
+  <!-- 录音控制区域 -->
+  <view class="record-controls">
+    <!-- 主录音按钮 -->
+    <view class="record-button-container">
+      <button 
+        class="record-btn {{isRecording ? 'recording' : ''}} {{!recordAuth ? 'disabled' : ''}}"
+        bindtouchstart="startRecording"
+        bindtouchend="stopRecording"
+        disabled="{{!recordAuth}}"
+      >
+        <view class="record-icon">
+          <text wx:if="{{!isRecording}}">🎙️</text>
+          <text wx:else class="recording-icon">⏹️</text>
+        </view>
+        <text class="record-text">
+          {{isRecording ? '录音中' : (recordAuth ? '按住录音' : '需要权限')}}
+        </text>
+      </button>
+    </view>
+
+    <!-- 操作按钮组 -->
+    <view class="action-buttons">
+      <!-- 播放按钮 -->
+      <button 
+        class="action-btn" 
+        bindtap="playRecording"
+        disabled="{{!hasRecording}}"
+      >
+        <text class="action-icon">▶️</text>
+        <text class="action-text">播放</text>
+      </button>
+
+      <!-- 下一句按钮 -->
+      <button class="action-btn" bindtap="nextSentence">
+        <text class="action-icon">⏭️</text>
+        <text class="action-text">下一句</text>
+      </button>
+
+      <!-- 重新录音按钮 -->
+      <button 
+        class="action-btn" 
+        bindtap="resetRecording"
+        disabled="{{!hasRecording}}"
+      >
+        <text class="action-icon">🔄</text>
+        <text class="action-text">重录</text>
+      </button>
+    </view>
+  </view>
+
+  <!-- 练习统计 -->
+  <view class="practice-stats card">
+    <view class="stats-item">
+      <text class="stats-number">{{practiceStats.sentenceCount}}</text>
+      <text class="stats-label">今日句数</text>
+    </view>
+    <view class="stats-divider"></view>
+    <view class="stats-item">
+      <text class="stats-number">{{practiceStats.totalTime}}</text>
+      <text class="stats-label">总时长</text>
+    </view>
+    <view class="stats-divider"></view>
+    <view class="stats-item">
+      <text class="stats-number">{{practiceStats.bestScore || '--'}}</text>
+      <text class="stats-label">最佳评分</text>
+    </view>
+  </view>
+
+  <!-- 权限申请提示 -->
+  <view class="auth-modal" wx:if="{{showAuthModal}}">
+    <view class="auth-content">
+      <text class="auth-title">需要录音权限</text>
+      <text class="auth-desc">请允许使用麦克风进行口语练习</text>
+      <view class="auth-buttons">
+        <button class="btn btn-secondary" bindtap="hideAuthModal">取消</button>
+        <button class="btn btn-primary" bindtap="requestAuth">授权</button>
+      </view>
+    </view>
+  </view>
+</view> 

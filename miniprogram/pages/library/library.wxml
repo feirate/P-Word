@@ -1,0 +1,5 @@
+<!--library.wxml-->
+<view class="container">
+  <text>📚 语料库页面</text>
+  <text>（功能开发中...）</text>
+</view> 

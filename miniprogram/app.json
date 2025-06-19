@@ -1,0 +1,60 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/history/history",
+    "pages/library/library",
+    "pages/settings/settings"
+  ],
+  "window": {
+    "backgroundTextStyle": "light",
+    "navigationBarBackgroundColor": "#4A90E2",
+    "navigationBarTitleText": "P-Word 口语练习",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#F5F7FA"
+  },
+  "tabBar": {
+    "color": "#7A7E83",
+    "selectedColor": "#4A90E2",
+    "borderStyle": "black",
+    "backgroundColor": "#FFFFFF",
+    "position": "bottom",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "iconPath": "assets/icons/practice.png",
+        "selectedIconPath": "assets/icons/practice-active.png",
+        "text": "练习"
+      },
+      {
+        "pagePath": "pages/history/history",
+        "iconPath": "assets/icons/history.png",
+        "selectedIconPath": "assets/icons/history-active.png",
+        "text": "历史"
+      },
+      {
+        "pagePath": "pages/library/library",
+        "iconPath": "assets/icons/library.png",
+        "selectedIconPath": "assets/icons/library-active.png",
+        "text": "语料库"
+      },
+      {
+        "pagePath": "pages/settings/settings",
+        "iconPath": "assets/icons/settings.png",
+        "selectedIconPath": "assets/icons/settings-active.png",
+        "text": "设置"
+      }
+    ]
+  },
+  "permission": {
+    "scope.record": {
+      "desc": "用于英语口语练习录音功能"
+    }
+  },
+  "requiredPrivateInfos": [
+    "getRecorderManager"
+  ],
+  "sitemapLocation": "sitemap.json",
+  "style": "v2",
+  "componentFramework": "glass-easel",
+  "lazyCodeLoading": "requiredComponents"
+} 

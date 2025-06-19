@@ -1,0 +1,182 @@
+[
+  {
+    "id": "beginner_001",
+    "content": "Hello, how are you?",
+    "translation": "你好，你好吗？",
+    "level": "初级",
+    "category": "问候",
+    "tags": ["greeting", "basic"],
+    "difficulty": 1
+  },
+  {
+    "id": "beginner_002",
+    "content": "Nice to meet you.",
+    "translation": "很高兴见到你。",
+    "level": "初级",
+    "category": "问候",
+    "tags": ["greeting", "polite"],
+    "difficulty": 1
+  },
+  {
+    "id": "beginner_003",
+    "content": "What's your name?",
+    "translation": "你叫什么名字？",
+    "level": "初级",
+    "category": "自我介绍",
+    "tags": ["introduction", "question"],
+    "difficulty": 1
+  },
+  {
+    "id": "beginner_004",
+    "content": "I'm fine, thank you.",
+    "translation": "我很好，谢谢。",
+    "level": "初级",
+    "category": "回应",
+    "tags": ["response", "polite"],
+    "difficulty": 1
+  },
+  {
+    "id": "beginner_005",
+    "content": "Where are you from?",
+    "translation": "你来自哪里？",
+    "level": "初级",
+    "category": "自我介绍",
+    "tags": ["introduction", "location"],
+    "difficulty": 1
+  },
+  {
+    "id": "beginner_006",
+    "content": "I'm from China.",
+    "translation": "我来自中国。",
+    "level": "初级",
+    "category": "自我介绍",
+    "tags": ["introduction", "location"],
+    "difficulty": 1
+  },
+  {
+    "id": "beginner_007",
+    "content": "How old are you?",
+    "translation": "你多大了？",
+    "level": "初级",
+    "category": "个人信息",
+    "tags": ["age", "question"],
+    "difficulty": 1
+  },
+  {
+    "id": "beginner_008",
+    "content": "I'm twenty years old.",
+    "translation": "我二十岁。",
+    "level": "初级",
+    "category": "个人信息",
+    "tags": ["age", "number"],
+    "difficulty": 1
+  },
+  {
+    "id": "beginner_009",
+    "content": "What do you do?",
+    "translation": "你是做什么工作的？",
+    "level": "初级",
+    "category": "职业",
+    "tags": ["job", "question"],
+    "difficulty": 1
+  },
+  {
+    "id": "beginner_010",
+    "content": "I'm a student.",
+    "translation": "我是学生。",
+    "level": "初级",
+    "category": "职业",
+    "tags": ["job", "student"],
+    "difficulty": 1
+  },
+  {
+    "id": "beginner_011",
+    "content": "Excuse me.",
+    "translation": "不好意思，打扰一下。",
+    "level": "初级",
+    "category": "礼貌用语",
+    "tags": ["polite", "attention"],
+    "difficulty": 1
+  },
+  {
+    "id": "beginner_012",
+    "content": "Thank you very much.",
+    "translation": "非常感谢。",
+    "level": "初级",
+    "category": "礼貌用语",
+    "tags": ["thanks", "polite"],
+    "difficulty": 1
+  },
+  {
+    "id": "beginner_013",
+    "content": "You're welcome.",
+    "translation": "不客气。",
+    "level": "初级",
+    "category": "礼貌用语",
+    "tags": ["response", "polite"],
+    "difficulty": 1
+  },
+  {
+    "id": "beginner_014",
+    "content": "I'm sorry.",
+    "translation": "对不起。",
+    "level": "初级",
+    "category": "道歉",
+    "tags": ["apology", "polite"],
+    "difficulty": 1
+  },
+  {
+    "id": "beginner_015",
+    "content": "No problem.",
+    "translation": "没问题。",
+    "level": "初级",
+    "category": "回应",
+    "tags": ["response", "reassurance"],
+    "difficulty": 1
+  },
+  {
+    "id": "beginner_016",
+    "content": "What time is it?",
+    "translation": "现在几点了？",
+    "level": "初级",
+    "category": "时间",
+    "tags": ["time", "question"],
+    "difficulty": 1
+  },
+  {
+    "id": "beginner_017",
+    "content": "It's three o'clock.",
+    "translation": "现在三点。",
+    "level": "初级",
+    "category": "时间",
+    "tags": ["time", "number"],
+    "difficulty": 1
+  },
+  {
+    "id": "beginner_018",
+    "content": "See you later.",
+    "translation": "回头见。",
+    "level": "初级",
+    "category": "告别",
+    "tags": ["goodbye", "casual"],
+    "difficulty": 1
+  },
+  {
+    "id": "beginner_019",
+    "content": "Good morning.",
+    "translation": "早上好。",
+    "level": "初级",
+    "category": "问候",
+    "tags": ["greeting", "morning"],
+    "difficulty": 1
+  },
+  {
+    "id": "beginner_020",
+    "content": "Good night.",
+    "translation": "晚安。",
+    "level": "初级",
+    "category": "告别",
+    "tags": ["goodbye", "night"],
+    "difficulty": 1
+  }
+] 
