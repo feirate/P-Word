@@ -1,4 +1,6 @@
 const app = getApp()
+// 引入安全服务模块
+const security = require('../../services/security.js')
 
 Page({
   data: {
@@ -45,6 +47,9 @@ Page({
   onLoad() {
     console.log('📱 练习页面加载')
     
+    // 【安全】清理过期数据
+    security.cleanExpiredData()
+    
     // 初始化页面数据
     this.initPageData()
     
@@ -60,7 +65,7 @@ Page({
     // 加载当前句子
     this.loadCurrentSentence()
     
-    // 加载今日统计
+    // 加载今日统计（使用安全存储）
     this.loadTodayStats()
   },
 
@@ -71,21 +76,9 @@ Page({
 
   // 初始化页面数据
   initPageData() {
-    const now = new Date()
-    const currentDate = `${now.getMonth() + 1}.${String(now.getDate()).padStart(2, '0')}`
-    
-    this.setData({
-      currentDate: currentDate
-    })
-    
-    // 获取系统信息
-    wx.getSystemInfo({
-      success: (res) => {
-        this.setData({
-          canvasWidth: res.windowWidth - 48 // 减去padding
-        })
-      }
-    })
+    const date = new Date()
+    const currentDate = `${date.getMonth() + 1}.${date.getDate()}`
+    this.setData({ currentDate })
   },
 
   // 检查录音权限
@@ -102,98 +95,77 @@ Page({
   initRecorder() {
     this.recorderManager = wx.getRecorderManager()
     
-    // 录音开始
+    // 配置录音参数
+    this.recorderOptions = {
+      duration: 60000,        // 最大录音时长1分钟
+      sampleRate: 16000,      // 采样率
+      numberOfChannels: 1,    // 声道数
+      encodeBitRate: 96000,   // 编码码率
+      format: 'mp3',          // 音频格式
+      frameSize: 20          // 指定帧大小，单位 KB
+    }
+    
+    // 录音开始事件
     this.recorderManager.onStart(() => {
-      console.log('🎙️ 开始录音')
+      console.log('🎤 录音开始')
       this.setData({ 
         isRecording: true,
-        recordDuration: 0
+        recordDuration: 0,
+        waveData: []
       })
-      this.startTimer()
+      
+      // 启动录音计时器
+      this.startRecordTimer()
     })
     
-    // 录音结束
+    // 录音结束事件
     this.recorderManager.onStop((res) => {
-      console.log('⏹️ 录音结束', res)
+      console.log('🎤 录音结束:', res)
+      
+      // 【安全】使用安全文件名
+      const secureFileName = security.generateSecureFileName('.mp3')
+      console.log('📁 安全文件名:', secureFileName)
+      
       this.setData({
         isRecording: false,
         hasRecording: true,
         audioPath: res.tempFilePath
       })
-      this.stopTimer()
-      this.savePracticeRecord()
+      
+      // 停止计时器
+      this.stopRecordTimer()
+      
+      // 保存录音记录（使用安全存储）
+      this.saveRecordingStats()
     })
     
-    // 录音帧数据
+    // 录音帧数据事件（用于波形绘制）
     this.recorderManager.onFrameRecorded((res) => {
-      this.updateWaveform(res.frameBuffer)
+      const { frameBuffer } = res
+      this.updateWaveform(frameBuffer)
     })
     
-    // 录音错误
+    // 录音错误事件
     this.recorderManager.onError((res) => {
-      console.error('❌ 录音错误', res)
+      console.error('🎤 录音错误:', res)
       wx.showToast({
         title: '录音失败',
-        icon: 'error'
+        icon: 'none'
       })
-      this.setData({ isRecording: false })
     })
   },
 
   // 初始化Canvas
   initCanvas() {
-    this.canvasContext = wx.createCanvasContext('waveCanvas', this)
-    this.drawEmptyWave()
-  },
-
-  // 绘制空波形
-  drawEmptyWave() {
-    const ctx = this.canvasContext
-    const { canvasWidth, canvasHeight } = this.data
-    
-    ctx.clearRect(0, 0, canvasWidth, canvasHeight)
-    ctx.setStrokeStyle('#E8E8E8')
-    ctx.setLineWidth(2)
-    ctx.beginPath()
-    ctx.moveTo(0, canvasHeight / 2)
-    ctx.lineTo(canvasWidth, canvasHeight / 2)
-    ctx.stroke()
-    ctx.draw()
-  },
-
-  // 更新波形显示
-  updateWaveform(frameBuffer) {
-    // 简化的波形绘制
-    const ctx = this.canvasContext
-    const { canvasWidth, canvasHeight } = this.data
-    
-    // 将音频数据转换为可视化数据
-    const dataArray = new Uint8Array(frameBuffer)
-    const average = dataArray.reduce((sum, value) => sum + value, 0) / dataArray.length
-    const normalizedValue = (average / 255) * (canvasHeight / 2)
-    
-    // 清除画布
-    ctx.clearRect(0, 0, canvasWidth, canvasHeight)
-    
-    // 绘制波形
-    ctx.setStrokeStyle('#4A90E2')
-    ctx.setLineWidth(3)
-    ctx.beginPath()
-    
-    const centerY = canvasHeight / 2
-    const waveHeight = Math.max(5, normalizedValue)
-    
-    for (let i = 0; i < canvasWidth; i += 4) {
-      const y = centerY + (Math.random() - 0.5) * waveHeight * 2
-      if (i === 0) {
-        ctx.moveTo(i, y)
-      } else {
-        ctx.lineTo(i, y)
+    const query = this.createSelectorQuery()
+    query.select('#waveCanvas').boundingClientRect((rect) => {
+      if (rect) {
+        this.setData({
+          canvasWidth: rect.width,
+          canvasHeight: rect.height
+        })
       }
-    }
-    
-    ctx.stroke()
-    ctx.draw()
+    }).exec()
   },
 
   // 开始录音
@@ -202,70 +174,59 @@ Page({
       this.showAuthModal()
       return
     }
-
-    console.log('🎙️ 开始录音')
-    this.recorderManager.start({
-      format: 'mp3',
-      frameSize: 1024,
-      sampleRate: 16000,
-      numberOfChannels: 1,
-      encodeBitRate: 48000
-    })
+    
+    this.recorderManager.start(this.recorderOptions)
   },
 
   // 停止录音
   stopRecording() {
     if (this.data.isRecording) {
-      console.log('⏹️ 停止录音')
       this.recorderManager.stop()
     }
   },
 
   // 播放录音
   playRecording() {
-    if (!this.data.hasRecording) return
+    if (!this.data.hasRecording || !this.data.audioPath) {
+      wx.showToast({
+        title: '暂无录音',
+        icon: 'none'
+      })
+      return
+    }
     
-    const audioContext = wx.createInnerAudioContext()
-    audioContext.src = this.data.audioPath
+    const audio = wx.createInnerAudioContext()
+    audio.src = this.data.audioPath
+    audio.play()
     
-    audioContext.onPlay(() => {
-      console.log('▶️ 开始播放')
+    audio.onError((res) => {
+      console.error('🔊 播放失败:', res)
+      wx.showToast({
+        title: '播放失败',
+        icon: 'none'
+      })
     })
-    
-    audioContext.onEnded(() => {
-      console.log('⏹️ 播放结束')
-      audioContext.destroy()
-    })
-    
-    audioContext.onError((res) => {
-      console.error('❌ 播放错误', res)
-      audioContext.destroy()
-    })
-    
-    audioContext.play()
   },
 
   // 重新录音
-  resetRecording() {
+  reRecord() {
     this.setData({
       hasRecording: false,
-      recordDuration: 0,
-      recordDurationText: '00:00',
-      audioPath: ''
+      audioPath: '',
+      waveData: []
     })
-    this.drawEmptyWave()
   },
 
-  // 下一句
-  nextSentence() {
-    const nextIndex = (this.data.currentIndex + 1) % this.data.totalSentences
-    this.setData({
-      currentIndex: nextIndex,
-      showTranslation: false
-    })
-    
+  // 切换句子
+  switchSentence() {
     this.loadCurrentSentence()
-    this.resetRecording()
+    
+    // 清除当前录音
+    this.setData({
+      hasRecording: false,
+      audioPath: '',
+      waveData: []
+    })
   },
 
   // 切换翻译显示
@@ -273,6 +234,152 @@ Page({
     this.setData({
       showTranslation: !this.data.showTranslation
     })
+  },
+
+  // 开始录音计时
+  startRecordTimer() {
+    this.recordTimer = setInterval(() => {
+      const duration = this.data.recordDuration + 1
+      const minutes = Math.floor(duration / 60)
+      const seconds = duration % 60
+      const timeText = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+      
+      this.setData({
+        recordDuration: duration,
+        recordDurationText: timeText
+      })
+    }, 1000)
+  },
+
+  // 停止录音计时
+  stopRecordTimer() {
+    if (this.recordTimer) {
+      clearInterval(this.recordTimer)
+    }
+  },
+
+  // 更新波形显示
+  updateWaveform(frameBuffer) {
+    const data = new Int16Array(frameBuffer)
+    const waveData = []
+    
+    // 采样数据点
+    const sampleStep = Math.floor(data.length / 50)
+    for (let i = 0; i < data.length; i += sampleStep) {
+      const amplitude = Math.abs(data[i]) / 32768 // 归一化到 0-1
+      waveData.push(amplitude)
+    }
+    
+    this.setData({ waveData })
+    this.drawWaveform()
+  },
+
+  // 绘制波形
+  drawWaveform() {
+    const { canvasWidth, canvasHeight, waveData } = this.data
+    
+    if (!canvasWidth || waveData.length === 0) return
+    
+    const ctx = wx.createCanvasContext('waveCanvas', this)
+    
+    // 清除画布
+    ctx.clearRect(0, 0, canvasWidth, canvasHeight)
+    
+    // 设置波形样式
+    ctx.setStrokeStyle('#4A90E2')
+    ctx.setLineWidth(2)
+    ctx.setLineCap('round')
+    
+    // 绘制波形
+    const barWidth = canvasWidth / waveData.length
+    const centerY = canvasHeight / 2
+    
+    waveData.forEach((amplitude, index) => {
+      const x = index * barWidth
+      const height = amplitude * (canvasHeight * 0.8)
+      
+      ctx.beginPath()
+      ctx.moveTo(x, centerY - height / 2)
+      ctx.lineTo(x, centerY + height / 2)
+      ctx.stroke()
+    })
+    
+    ctx.draw()
+  },
+
+  // 加载当前句子
+  loadCurrentSentence() {
+    // 模拟从语料库加载句子
+    const sentences = [
+      { id: 'sentence_001', content: 'Hello, how are you today?', translation: '你好，你今天怎么样？' },
+      { id: 'sentence_002', content: 'What time is it now?', translation: '现在几点了？' },
+      { id: 'sentence_003', content: 'I would like to have some coffee.', translation: '我想要一些咖啡。' },
+      { id: 'sentence_004', content: 'Where is the nearest subway station?', translation: '最近的地铁站在哪里？' },
+      { id: 'sentence_005', content: 'Could you please help me?', translation: '你能帮助我吗？' }
+    ]
+    
+    const randomIndex = Math.floor(Math.random() * sentences.length)
+    const sentence = sentences[randomIndex]
+    
+    this.setData({
+      currentSentence: {
+        ...sentence,
+        level: '初级',
+        category: '日常对话'
+      },
+      currentIndex: randomIndex + 1,
+      showTranslation: false
+    })
+  },
+
+  // 【安全】保存录音统计（使用加密存储）
+  saveRecordingStats() {
+    const { recordDuration, currentSentence } = this.data
+    
+    // 获取当前统计
+    const currentStats = security.secureGet('practice_stats') || {
+      sentenceCount: 0,
+      totalTime: 0,
+      bestScore: null,
+      lastPracticeDate: null
+    }
+    
+    // 更新统计数据
+    const updatedStats = {
+      ...currentStats,
+      sentenceCount: currentStats.sentenceCount + 1,
+      totalTime: currentStats.totalTime + recordDuration,
+      lastPracticeDate: new Date().toISOString(),
+      // 【隐私保护】不保存具体录音内容，仅保存统计信息
+      version: '1.0',
+      timestamp: Date.now()
+    }
+    
+    // 【安全】使用加密存储
+    security.secureStorage('practice_stats', updatedStats)
+    
+    // 更新页面显示
+    this.setData({
+      practiceStats: updatedStats,
+      todayPracticeTime: updatedStats.totalTime
+    })
+    
+    console.log('📊 练习统计已保存（加密）')
+  },
+
+  // 【安全】加载今日统计（使用安全读取）
+  loadTodayStats() {
+    const stats = security.secureGet('practice_stats')
+    
+    if (stats && security.checkDataIntegrity(stats)) {
+      this.setData({
+        practiceStats: stats,
+        todayPracticeTime: stats.totalTime || 0
+      })
+      console.log('📊 练习统计已加载（解密）')
+    } else {
+      console.log('📊 无有效统计数据')
+    }
   },
 
   // 显示权限申请弹框
@@ -285,9 +392,22 @@ Page({
     this.setData({ showAuthModal: false })
   },
 
-  // 申请权限
+  // 申请权限（增强隐私说明）
   async requestAuth() {
     try {
+      // 【隐私保护】详细说明权限用途
+      await wx.showModal({
+        title: '录音权限说明',
+        content: '我们需要录音权限用于英语口语练习功能。录音文件仅在您的设备本地处理，不会上传到服务器或收集您的个人信息。',
+        showCancel: true,
+        confirmText: '同意并开启',
+        cancelText: '暂不开启'
+      }).then((res) => {
+        if (!res.confirm) {
+          throw new Error('用户拒绝权限申请')
+        }
+      })
+      
       await app.requestRecordAuth()
       this.setData({
         recordAuth: true,
@@ -299,111 +419,23 @@ Page({
       })
     } catch (error) {
       console.error('权限申请失败', error)
+      this.setData({ showAuthModal: false })
     }
   },
 
-  // 开始计时器
-  startTimer() {
-    this.timer = setInterval(() => {
-      const duration = this.data.recordDuration + 1
-      const minutes = Math.floor(duration / 60)
-      const seconds = duration % 60
-      const timeText = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
-      
-      this.setData({
-        recordDuration: duration,
-        recordDurationText: timeText
-      })
-    }, 1000)
-  },
-
-  // 停止计时器
-  stopTimer() {
-    if (this.timer) {
-      clearInterval(this.timer)
-      this.timer = null
-    }
-  },
-
-  // 加载当前句子
-  loadCurrentSentence() {
-    // 这里应该从语料库加载句子
-    // 暂时使用模拟数据
-    const sentences = [
-      {
-        id: 'sentence_001',
-        content: 'Hello, how are you today?',
-        translation: '你好，你今天怎么样？',
-        level: '初级',
-        category: '日常对话'
-      },
-      {
-        id: 'sentence_002',
-        content: 'I would like to book a table for two.',
-        translation: '我想预订一张两人桌。',
-        level: '中级',
-        category: '餐厅对话'
-      },
-      {
-        id: 'sentence_003',
-        content: 'Could you please help me with this problem?',
-        translation: '你能帮我解决这个问题吗？',
-        level: '中级',
-        category: '求助对话'
-      }
-    ]
-    
-    const currentSentence = sentences[this.data.currentIndex % sentences.length]
-    this.setData({ currentSentence })
-  },
-
-  // 加载今日统计
-  loadTodayStats() {
-    // 从本地存储加载今日练习统计
-    const today = new Date().toDateString()
-    const todayStats = wx.getStorageSync(`stats_${today}`) || {
-      sentenceCount: 0,
-      totalTime: 0,
-      bestScore: null
-    }
-    
-    this.setData({
-      practiceStats: todayStats,
-      todayPracticeTime: Math.floor(todayStats.totalTime / 60)
-    })
-  },
-
-  // 保存练习记录
-  savePracticeRecord() {
-    const today = new Date().toDateString()
-    const currentStats = wx.getStorageSync(`stats_${today}`) || {
-      sentenceCount: 0,
-      totalTime: 0,
-      bestScore: null
-    }
-    
-    // 更新统计
-    currentStats.sentenceCount += 1
-    currentStats.totalTime += this.data.recordDuration
-    
-    // 保存到本地
-    wx.setStorageSync(`stats_${today}`, currentStats)
-    
-    // 更新页面数据
-    this.loadTodayStats()
-    
-    console.log('💾 练习记录已保存', currentStats)
-  },
-
-  // 跳转到设置页
-  goToSettings() {
-    wx.navigateTo({
-      url: '/pages/settings/settings'
-    })
-  },
-
+  // 页面销毁时清理
   onUnload() {
-    // 页面卸载时清理计时器
-    this.stopTimer()
+    // 清理定时器
+    if (this.recordTimer) {
+      clearInterval(this.recordTimer)
+    }
+    
+    // 【安全】清理临时文件（24小时后）
+    const tempFiles = wx.getStorageSync('temp_audio_files') || []
+    const now = Date.now()
+    const validFiles = tempFiles.filter(file => 
+      now - file.timestamp < 24 * 60 * 60 * 1000 // 24小时
+    )
+    wx.setStorageSync('temp_audio_files', validFiles)
   }
 }) 

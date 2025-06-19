@@ -42,6 +42,8 @@
   },
   "compileType": "miniprogram",
   "libVersion": "2.19.4",
+  // 【安全注意】：此处使用测试AppID，请勿提交真实AppID到Git仓库
+  // 发布时请手动替换为您的真实AppID，或使用环境变量
   "appid": "touristappid",
   "projectname": "P-Word",
   "debugOptions": {

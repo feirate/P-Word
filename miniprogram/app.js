@@ -18,9 +18,9 @@ App({
     // 检查录音权限
     this.checkRecordAuth()
     
-    // 初始化全局数据
+    // 初始化全局数据（已移除用户隐私信息收集）
     this.globalData = {
-      userInfo: null,
+      // 【隐私保护】不收集用户个人信息，仅保留必要的功能状态
       recordAuth: false,
       currentSentence: null,
       practiceStats: {

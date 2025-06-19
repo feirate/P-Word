@@ -36,10 +36,23 @@ cloudfunctions/*/node_modules/
 dist/
 build/
 
-# 敏感信息
+# 【安全重要】敏感信息保护
 *.key
 *.pem
 config/secret.js
+config/production.js
+env.js
+.env
+.env.local
+.env.production
+project.private.config.json
+# 真实AppID配置文件（如果使用）
+appid.config.js
+
+# 【安全重要】用户数据保护  
+user-data/
+logs/
+crash-reports/
 
 # 开发时的临时文件
 temp/
