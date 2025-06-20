@@ -13,9 +13,12 @@ class SecurityService {
    * @returns {string} 加密密钥
    */
   generateKey() {
-    // 使用设备唯一标识和时间戳生成密钥
-    const systemInfo = wx.getSystemInfoSync()
-    const deviceId = systemInfo.model + systemInfo.system + systemInfo.version
+    // 使用新的API获取设备信息
+    const deviceInfo = wx.getDeviceInfo?.() || {}
+    const appInfo = wx.getAppBaseInfo?.() || {}
+    const deviceId = (deviceInfo.model || 'unknown') + 
+                    (deviceInfo.system || appInfo.platform || 'unknown') + 
+                    (appInfo.version || '1.0.0')
     return this.hashString(deviceId + Date.now().toString())
   }
 

@@ -7,6 +7,8 @@ const audioService = require('../../services/audioService.js')
 const sentenceService = require('../../services/sentenceService.js')
 // 引入云数据同步服务模块
 const cloudService = require('../../services/cloudService.js')
+// 引入语音朗读服务模块
+const ttsService = require('../../services/ttsService.js')
 
 Page({
   data: {
@@ -58,7 +60,18 @@ Page({
     },
     
     // UI状态
-    showAuthModal: false
+    showAuthModal: false,
+    
+    // 游戏化数据
+    practiceStreak: 0,           // 连续练习天数
+    dailyGoal: 20,               // 日常目标句数
+    goalPercentage: 0,           // 目标完成百分比
+    todayAchievements: [],       // 今日获得的成就
+    difficultyStars: '',         // 难度星星显示
+    
+    // TTS 相关
+    isTTSPlaying: false,         // TTS播放状态
+    autoPlayEnabled: true,       // 自动朗读功能
   },
 
   onLoad() {
@@ -92,6 +105,15 @@ Page({
     
     // 加载今日统计（使用安全存储）
     this.loadTodayStats()
+    
+    // 初始化游戏化数据
+    this.initGameData()
+    
+    // 绘制进度环
+    this.drawProgressRing()
+    
+    // 加载TTS设置
+    this.loadTTSSettings()
   },
 
   onShow() {
@@ -189,23 +211,26 @@ Page({
 
   // 初始化Canvas（增强版）
   initCanvas() {
-    const query = this.createSelectorQuery()
-    query.select('#waveCanvas').boundingClientRect((rect) => {
-      if (rect && rect.width > 0 && rect.height > 0) {
-        this.setData({
-          canvasWidth: rect.width,
-          canvasHeight: rect.height
-        })
-        console.log(`✅ Canvas初始化成功: ${rect.width}x${rect.height}`)
-      } else {
-        console.warn('⚠️ Canvas初始化失败，使用默认尺寸')
-        // 使用默认尺寸
-        this.setData({
-          canvasWidth: 300,
-          canvasHeight: 100
-        })
-      }
-    }).exec()
+    // 延迟执行，确保DOM已渲染
+    setTimeout(() => {
+      const query = this.createSelectorQuery()
+      query.select('#waveCanvas').boundingClientRect((rect) => {
+        if (rect && rect.width > 0 && rect.height > 0) {
+          this.setData({
+            canvasWidth: rect.width,
+            canvasHeight: rect.height
+          })
+          console.log(`✅ Canvas初始化成功: ${rect.width}x${rect.height}`)
+        } else {
+          console.warn('⚠️ Canvas初始化失败，使用默认尺寸')
+          // 使用默认尺寸
+          this.setData({
+            canvasWidth: 300,
+            canvasHeight: 100
+          })
+        }
+      }).exec()
+    }, 100) // 延迟100ms
   },
 
   // 开始录音
@@ -229,6 +254,11 @@ Page({
     if (this.data.isRecording) {
       audioService.stopRecording()
     }
+    
+    // 检查录音质量成就
+    setTimeout(() => {
+      this.checkTodayAchievements()
+    }, 1000)
   },
 
   // 播放录音
@@ -271,7 +301,17 @@ Page({
         showTranslation: false
       })
       
+      // 更新难度星星显示
+      this.updateDifficultyStars()
+      
       console.log(`🔄 切换到句子: [${nextSentence.level}] ${nextSentence.content}`)
+      
+      // 自动朗读新句子
+      if (this.data.autoPlayEnabled) {
+        setTimeout(() => {
+          this.playTextToSpeech()
+        }, 500) // 延迟0.5秒让用户适应
+      }
     }
     
     // 清除当前录音
@@ -281,6 +321,25 @@ Page({
       waveData: [],
       audioQuality: null
     })
+    
+    // 更新游戏化数据
+    this.updateGoalProgress()
+    this.updateStreak()
+    this.checkTodayAchievements()
+  },
+
+  // 更新难度星星显示
+  updateDifficultyStars: function() {
+    const { currentSentence } = this.data
+    if (currentSentence && currentSentence.difficulty) {
+      let stars = ''
+      for (let i = 0; i < currentSentence.difficulty; i++) {
+        stars += '★'
+      }
+      this.setData({ difficultyStars: stars })
+    } else {
+      this.setData({ difficultyStars: '' })
+    }
   },
 
   // 切换翻译显示
@@ -288,6 +347,101 @@ Page({
     this.setData({
       showTranslation: !this.data.showTranslation
     })
+  },
+
+  // 播放文本朗读（TTS）
+  async playTextToSpeech() {
+    const { currentSentence, isTTSPlaying } = this.data
+    
+    if (!currentSentence || !currentSentence.content) {
+      console.warn('⚠️ 没有可朗读的句子')
+      return
+    }
+    
+    // 如果正在播放，则停止
+    if (isTTSPlaying) {
+      this.stopTextToSpeech()
+      return
+    }
+    
+    try {
+      console.log('🔊 开始朗读:', currentSentence.content)
+      
+      // 更新播放状态
+      this.setData({ isTTSPlaying: true })
+      
+      // 调用TTS服务
+      const result = await ttsService.playText(currentSentence.content, {
+        rate: 0.8, // 稍慢一点，便于学习
+        volume: 0.9
+      })
+      
+      if (result.success) {
+        console.log('✅ TTS播放完成')
+      } else {
+        console.log('ℹ️ TTS播放结果:', result.message)
+        if (result.message) {
+          wx.showToast({
+            title: result.message,
+            icon: 'none',
+            duration: 2000
+          })
+        }
+      }
+      
+    } catch (error) {
+      console.error('❌ TTS播放失败:', error)
+      wx.showToast({
+        title: 'TTS功能暂不可用',
+        icon: 'none',
+        duration: 2000
+      })
+    } finally {
+      // 重置播放状态
+      this.setData({ isTTSPlaying: false })
+    }
+  },
+
+  // 停止文本朗读
+  stopTextToSpeech() {
+    try {
+      ttsService.stopCurrent()
+      this.setData({ isTTSPlaying: false })
+      console.log('⏹️ TTS播放已停止')
+    } catch (error) {
+      console.error('❌ 停止TTS时出错:', error)
+    }
+  },
+
+  // 切换自动朗读功能
+  toggleAutoPlay() {
+    const newAutoPlayEnabled = !this.data.autoPlayEnabled
+    this.setData({ autoPlayEnabled: newAutoPlayEnabled })
+    
+    // 保存设置到本地存储
+    wx.setStorageSync('autoPlayEnabled', newAutoPlayEnabled)
+    
+    const message = newAutoPlayEnabled ? '已开启自动朗读' : '已关闭自动朗读'
+    wx.showToast({
+      title: message,
+      icon: 'success',
+      duration: 1500
+    })
+    
+    console.log(`⚙️ 自动朗读功能: ${newAutoPlayEnabled ? '开启' : '关闭'}`)
+  },
+
+  // 加载TTS设置
+  loadTTSSettings() {
+    try {
+      const autoPlayEnabled = wx.getStorageSync('autoPlayEnabled')
+      if (autoPlayEnabled !== undefined && autoPlayEnabled !== null) {
+        this.setData({ autoPlayEnabled })
+        console.log(`📱 已加载自动朗读设置: ${autoPlayEnabled ? '开启' : '关闭'}`)
+      }
+    } catch (error) {
+      console.warn('⚠️ 加载TTS设置失败:', error)
+    }
   },
 
   // 开始录音计时
@@ -365,7 +519,7 @@ Page({
     }
     
     // 设置画布尺寸
-    const dpr = wx.getSystemInfoSync().pixelRatio
+    const dpr = wx.getDeviceInfo?.()?.pixelRatio || wx.getAppBaseInfo?.()?.pixelRatio || 2
     canvas.width = canvasWidth * dpr
     canvas.height = canvasHeight * dpr
     ctx.scale(dpr, dpr)
@@ -518,6 +672,9 @@ Page({
         availableCategories: categories
       })
       
+      // 更新难度星星显示
+      this.updateDifficultyStars()
+      
       console.log('✅ 语料库系统初始化完成')
       console.log(`📊 语料库统计: ${sentenceService.getTotalCount()} 句，${categories.length} 个分类`)
       
@@ -537,6 +694,9 @@ Page({
         totalSentences: 1,
         availableCategories: ['问候']
       })
+      
+      // 更新难度星星显示
+      this.updateDifficultyStars()
     }
   },
 
@@ -936,6 +1096,11 @@ Page({
     // 清理录音服务
     audioService.cleanup()
     
+    // 清理TTS服务资源
+    if (ttsService && ttsService.destroy) {
+      ttsService.destroy()
+    }
+    
     // 【安全】清理临时文件（24小时后）
     const tempFiles = wx.getStorageSync('temp_audio_files') || []
     const now = Date.now()
@@ -943,5 +1108,215 @@ Page({
       now - file.timestamp < 24 * 60 * 60 * 1000 // 24小时
     )
     wx.setStorageSync('temp_audio_files', validFiles)
-  }
+  },
+
+  // 初始化游戏化数据
+  initGameData: function() {
+    try {
+      // 获取练习连击数据
+      const streakData = wx.getStorageSync('practiceStreak') || {
+        count: 0,
+        lastDate: null
+      };
+      
+      const today = new Date().toDateString();
+      const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toDateString();
+      
+      // 检查连击是否中断
+      if (streakData.lastDate === yesterday || streakData.lastDate === today) {
+        this.setData({ practiceStreak: streakData.count });
+      } else {
+        this.setData({ practiceStreak: 0 });
+      }
+      
+      // 计算目标完成百分比
+      this.updateGoalProgress();
+      
+      // 检查今日成就
+      this.checkTodayAchievements();
+      
+    } catch (e) {
+      console.error('初始化游戏化数据失败:', e);
+    }
+  },
+
+  // 更新目标进度
+  updateGoalProgress: function() {
+    const { sentenceCount } = this.data.practiceStats;
+    const { dailyGoal } = this.data;
+    const percentage = Math.min(Math.round((sentenceCount / dailyGoal) * 100), 100);
+    
+    this.setData({ 
+      goalPercentage: percentage 
+    });
+    
+    // 重新绘制进度环
+    this.drawProgressRing();
+  },
+
+  // 绘制进度环
+  drawProgressRing: function() {
+    // 延迟执行，确保DOM已渲染
+    setTimeout(() => {
+      const query = wx.createSelectorQuery();
+      query.select('#progressRing')
+        .fields({ node: true, size: true })
+        .exec((res) => {
+          if (res[0] && res[0].node) {
+            const canvas = res[0].node;
+            const ctx = canvas.getContext('2d');
+            
+            if (ctx) {
+              const dpr = wx.getDeviceInfo?.()?.pixelRatio || wx.getAppBaseInfo?.()?.pixelRatio || 2;
+              canvas.width = res[0].width * dpr;
+              canvas.height = res[0].height * dpr;
+              ctx.scale(dpr, dpr);
+              
+              this.animateProgressRing(ctx, res[0].width, res[0].height);
+            } else {
+              console.warn('⚠️ 进度环Canvas context获取失败');
+            }
+          } else {
+            console.warn('⚠️ 进度环Canvas节点获取失败');
+          }
+        });
+    }, 200); // 延迟200ms
+  },
+
+  // 进度环动画
+  animateProgressRing: function(ctx, width, height) {
+    const centerX = width / 2;
+    const centerY = height / 2;
+    const radius = Math.min(width, height) / 2 - 6;
+    const { goalPercentage } = this.data;
+    
+    let currentProgress = 0;
+    const targetProgress = goalPercentage;
+    const animationDuration = 1000; // 1秒动画
+    const startTime = Date.now();
+    const frameRate = 16; // 约60fps
+    
+    const animate = () => {
+      const now = Date.now();
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / animationDuration, 1);
+      
+      // 清除画布
+      ctx.clearRect(0, 0, width, height);
+      
+      // 绘制背景圆环
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+      ctx.strokeStyle = 'rgba(33, 150, 243, 0.1)';
+      ctx.lineWidth = 8;
+      ctx.stroke();
+      
+      // 绘制进度圆环
+      currentProgress = targetProgress * progress;
+      const angle = (currentProgress / 100) * 2 * Math.PI - Math.PI / 2;
+      
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius, -Math.PI / 2, angle);
+      
+      // 创建渐变
+      const gradient = ctx.createLinearGradient(0, 0, width, height);
+      gradient.addColorStop(0, '#2196F3');
+      gradient.addColorStop(1, '#1976D2');
+      
+      ctx.strokeStyle = gradient;
+      ctx.lineWidth = 8;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+      
+      if (progress < 1) {
+        // 使用setTimeout替代requestAnimationFrame
+        setTimeout(animate, frameRate);
+      }
+    };
+    
+    animate();
+  },
+
+  // 检查今日成就
+  checkTodayAchievements: function() {
+    const { practiceStats, practiceStreak } = this.data;
+    const achievements = [];
+    
+    // 检查各种成就条件
+    if (practiceStats.sentenceCount >= 10 && practiceStats.sentenceCount % 10 === 0) {
+      achievements.push({ id: 'sentences_10', icon: '🎯' });
+    }
+    
+    if (practiceStreak >= 7) {
+      achievements.push({ id: 'streak_7', icon: '🔥' });
+    }
+    
+    if (practiceStats.bestScore >= 90) {
+      achievements.push({ id: 'quality_master', icon: '🎵' });
+    }
+    
+    if (practiceStats.totalTime >= 30) {
+      achievements.push({ id: 'time_master', icon: '⭐' });
+    }
+    
+    this.setData({ todayAchievements: achievements });
+  },
+
+  // 更新连击数据
+  updateStreak: function() {
+    try {
+      const today = new Date().toDateString();
+      let streakData = wx.getStorageSync('practiceStreak') || {
+        count: 0,
+        lastDate: null
+      };
+      
+      if (streakData.lastDate !== today) {
+        const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toDateString();
+        
+        if (streakData.lastDate === yesterday) {
+          // 连续练习
+          streakData.count += 1;
+        } else {
+          // 重新开始
+          streakData.count = 1;
+        }
+        
+        streakData.lastDate = today;
+        wx.setStorageSync('practiceStreak', streakData);
+        
+        this.setData({ practiceStreak: streakData.count });
+      }
+    } catch (e) {
+      console.error('更新连击数据失败:', e);
+    }
+  },
+
+  // 快捷操作方法
+  goToHistory: function() {
+    wx.navigateTo({
+      url: '/pages/history/history'
+    });
+  },
+
+  goToLibrary: function() {
+    wx.navigateTo({
+      url: '/pages/library/library'
+    });
+  },
+
+  sharePractice: function() {
+    const { practiceStats, practiceStreak } = this.data;
+    
+    wx.showShareMenu({
+      withShareTicket: true,
+      menus: ['shareAppMessage', 'shareTimeline']
+    });
+    
+    // 可以添加分享逻辑
+    wx.showToast({
+      title: '分享功能开发中',
+      icon: 'none'
+    });
+  },
 }) 
