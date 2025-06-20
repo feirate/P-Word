@@ -287,6 +287,180 @@
     </view>
   </view>
 
+  <!-- TTS语音朗读测试 -->
+  <view class="tab-content" wx:if="{{currentTab === 4}}">
+    <view class="section-title">
+      <icon name="volume-on" size="24" color="#2196F3" />
+      <text>TTS语音朗读测试</text>
+    </view>
+    
+    <!-- 支持状态显示 -->
+    <view class="support-status">
+      <view class="status-row">
+        <text class="status-label">支持状态：</text>
+        <text class="status-value {{ttsSupported ? 'supported' : 'not-supported'}}">
+          {{ttsSupported ? '✅ 支持' : '❌ 不支持'}}
+        </text>
+      </view>
+    </view>
+    
+    <!-- 环境信息 -->
+    <view class="env-info" wx:if="{{ttsInfo}}">
+      <view class="info-title">环境检测结果</view>
+      <view class="info-grid">
+        <view class="info-item">
+          <text class="info-label">运行环境</text>
+          <text class="info-value">{{ttsInfo.environment}}</text>
+        </view>
+        <view class="info-item">
+          <text class="info-label">操作系统</text>
+          <text class="info-value">{{ttsInfo.platform}}</text>
+        </view>
+        <view class="info-item">
+          <text class="info-label">微信语音引擎</text>
+          <text class="info-value {{ttsInfo.wxCreateSynthesizeEngine ? 'supported' : 'not-supported'}}">
+            {{ttsInfo.wxCreateSynthesizeEngine ? '✅ 支持' : '❌ 不支持'}}
+          </text>
+        </view>
+        <view class="info-item">
+          <text class="info-label">Web语音API</text>
+          <text class="info-value {{ttsInfo.speechSynthesis ? 'supported' : 'not-supported'}}">
+            {{ttsInfo.speechSynthesis ? '✅ 支持' : '❌ 不支持'}}
+          </text>
+        </view>
+      </view>
+    </view>
+    
+    <!-- 测试文本输入 -->
+    <view class="test-input-section">
+      <view class="input-title">测试文本</view>
+      <textarea 
+        class="text-input"
+        value="{{testText}}"
+        bindinput="onTextInput"
+        placeholder="请输入要朗读的英文文本进行测试..."
+        maxlength="200"
+      />
+    </view>
+    
+    <!-- 测试按钮 -->
+    <view class="test-controls">
+      <button 
+        class="test-btn primary {{isPlaying ? 'playing' : ''}}"
+        bindtap="testTTS"
+        disabled="{{isPlaying}}"
+      >
+        {{isPlaying ? '🔊 播放中...' : '🎯 开始TTS测试'}}
+      </button>
+    </view>
+    
+    <!-- 测试结果 -->
+    <view class="test-result-section" wx:if="{{testResult}}">
+      <view class="result-title">测试结果</view>
+      <view class="result-content">
+        <text class="result-text">{{testResult}}</text>
+      </view>
+    </view>
+    
+    <!-- 诊断建议 -->
+    <view class="diagnosis-section" wx:if="{{ttsInfo && !ttsSupported}}">
+      <view class="diagnosis-title">问题诊断与建议</view>
+      <view class="diagnosis-content">
+        <view class="diagnosis-item" wx:if="{{ttsInfo.environment === 'browser'}}">
+          <text class="diagnosis-icon">💡</text>
+          <text class="diagnosis-text">检测到您在开发者工具中测试，开发者工具不支持语音朗读功能。请在手机真机上测试。</text>
+        </view>
+        <view class="diagnosis-item" wx:if="{{!ttsInfo.wxCreateSynthesizeEngine && !ttsInfo.speechSynthesis}}">
+          <text class="diagnosis-icon">⚠️</text>
+          <text class="diagnosis-text">当前设备不支持语音合成API，建议更新微信版本或在支持的设备上测试。</text>
+        </view>
+        <view class="diagnosis-item">
+          <text class="diagnosis-icon">📱</text>
+          <text class="diagnosis-text">建议测试环境：手机微信客户端（iOS 12+，Android 6+），微信版本 7.0+</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 权限诊断页面 -->
+  <view class="tab-content" wx:if="{{currentTab === 5}}">
+    <view class="section-title">
+      <icon name="settings" size="24" color="#2196F3" />
+      <text>录音权限诊断</text>
+    </view>
+    
+    <!-- 权限状态显示 -->
+    <view class="permission-status">
+      <view class="status-title">当前权限状态</view>
+      <view class="status-time" wx:if="{{lastCheckTime}}">
+        最后检查: {{lastCheckTime}}
+      </view>
+      
+      <view class="permission-grid" wx:if="{{permissionInfo}}">
+        <view class="permission-item">
+          <text class="permission-label">录音权限</text>
+          <text class="permission-value {{permissionInfo.record ? 'granted' : 'denied'}}">
+            {{permissionInfo.record ? '✅ 已授权' : '❌ 未授权'}}
+          </text>
+        </view>
+        <view class="permission-item">
+          <text class="permission-label">相机权限</text>
+          <text class="permission-value {{permissionInfo.camera ? 'granted' : 'denied'}}">
+            {{permissionInfo.camera ? '✅ 已授权' : '❌ 未授权'}}
+          </text>
+        </view>
+        <view class="permission-item">
+          <text class="permission-label">用户信息</text>
+          <text class="permission-value {{permissionInfo.userInfo ? 'granted' : 'denied'}}">
+            {{permissionInfo.userInfo ? '✅ 已授权' : '❌ 未授权'}}
+          </text>
+        </view>
+        <view class="permission-item">
+          <text class="permission-label">保存图片</text>
+          <text class="permission-value {{permissionInfo.writePhotosAlbum ? 'granted' : 'denied'}}">
+            {{permissionInfo.writePhotosAlbum ? '✅ 已授权' : '❌ 未授权'}}
+          </text>
+        </view>
+      </view>
+    </view>
+    
+    <!-- 诊断操作 -->
+    <view class="diagnosis-actions">
+      <button class="diagnosis-btn check" bindtap="checkAllPermissions">
+        🔍 检查权限状态
+      </button>
+      <button class="diagnosis-btn test" bindtap="testRecordPermission">
+        🎤 测试录音权限
+      </button>
+      <button class="diagnosis-btn reset" bindtap="resetPermissions">
+        ⚙️ 打开设置页面
+      </button>
+    </view>
+    
+    <!-- 诊断说明 -->
+    <view class="diagnosis-guide">
+      <view class="guide-title">诊断说明</view>
+      <view class="guide-content">
+        <view class="guide-item">
+          <text class="guide-number">1.</text>
+          <text class="guide-text">首次使用需要授权录音权限</text>
+        </view>
+        <view class="guide-item">
+          <text class="guide-number">2.</text>
+          <text class="guide-text">如果权限被拒绝，需要手动到设置中开启</text>
+        </view>
+        <view class="guide-item">
+          <text class="guide-number">3.</text>
+          <text class="guide-text">开发者工具可能无法完整模拟权限申请流程</text>
+        </view>
+        <view class="guide-item">
+          <text class="guide-number">4.</text>
+          <text class="guide-text">建议在真机上测试录音功能</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
   <!-- 调试面板 -->
   <view class="debug-panel {{showDebugPanel ? 'open' : ''}}">
     <view class="debug-header" bindtap="toggleDebugPanel">

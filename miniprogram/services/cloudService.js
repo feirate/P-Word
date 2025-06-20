@@ -109,19 +109,38 @@ class CloudService {
    */
   uploadToCloud(record) {
     return new Promise((resolve, reject) => {
+      // 检查是否为开发环境
+      const isDevelopment = typeof __DEV__ !== 'undefined' ? __DEV__ : true
+      const delay = isDevelopment ? 200 : (500 + Math.random() * 1000)
+      
       // 模拟云数据库API调用
       // 实际项目中这里应该是微信云开发的数据库操作
       setTimeout(() => {
-        if (Math.random() > 0.1) { // 90%成功率模拟
-          resolve({
-            success: true,
-            _id: record._id,
-            timestamp: Date.now()
-          })
-        } else {
-          reject(new Error('网络错误'))
+        try {
+          if (isDevelopment) {
+            // 开发环境：100%成功率
+            resolve({
+              success: true,
+              _id: record._id || `mock_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+              timestamp: Date.now()
+            })
+          } else {
+            // 生产环境：模拟一定的失败率
+            if (Math.random() > 0.05) { // 95%成功率
+              resolve({
+                success: true,
+                _id: record._id || `mock_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                timestamp: Date.now()
+              })
+            } else {
+              reject(new Error('网络连接超时，请稍后重试'))
+            }
+          }
+        } catch (error) {
+          console.error('❌ 云数据库上传异常:', error)
+          reject(new Error('上传服务暂时不可用'))
         }
-      }, 500 + Math.random() * 1000) // 模拟网络延迟
+      }, delay)
     })
   }
 
@@ -159,19 +178,39 @@ class CloudService {
    */
   queryFromCloud(query, options = {}) {
     return new Promise((resolve, reject) => {
+      // 检查是否为开发环境
+      const isDevelopment = typeof __DEV__ !== 'undefined' ? __DEV__ : true
+      const delay = isDevelopment ? 100 : (300 + Math.random() * 700)
+      
       // 模拟云数据库查询
       setTimeout(() => {
-        if (Math.random() > 0.05) { // 95%成功率
-          const mockData = this.generateMockCloudData(query, options)
-          resolve({
-            success: true,
-            data: mockData,
-            total: mockData.length
-          })
-        } else {
-          reject(new Error('查询失败'))
+        try {
+          if (isDevelopment) {
+            // 开发环境：100%成功率，便于开发调试
+            const mockData = this.generateMockCloudData(query, options)
+            resolve({
+              success: true,
+              data: mockData,
+              total: mockData.length
+            })
+          } else {
+            // 生产环境：模拟一定的失败率
+            if (Math.random() > 0.02) { // 98%成功率
+              const mockData = this.generateMockCloudData(query, options)
+              resolve({
+                success: true,
+                data: mockData,
+                total: mockData.length
+              })
+            } else {
+              reject(new Error('网络请求超时，请稍后重试'))
+            }
+          }
+        } catch (error) {
+          console.error('❌ 云数据库查询异常:', error)
+          reject(new Error('查询服务暂时不可用'))
         }
-      }, 300 + Math.random() * 700)
+      }, delay)
     })
   }
 

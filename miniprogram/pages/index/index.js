@@ -74,7 +74,7 @@ Page({
     autoPlayEnabled: true,       // 自动朗读功能
   },
 
-  onLoad() {
+  async onLoad() {
     console.log('📱 练习页面加载')
     
     // 【安全】清理过期数据
@@ -83,13 +83,13 @@ Page({
     // 初始化页面数据
     this.initPageData()
     
-    // 检查录音权限
-    this.checkRecordAuth()
+    // 检查录音权限并等待结果
+    const hasRecordAuth = await this.checkRecordAuth()
     
-    // 根据权限状态初始化音频服务
-    if (app.globalData.recordAuth) {
-      this.initAudioService()
-      console.log('✅ 已有录音权限，音频服务已初始化')
+    // 注意：checkRecordAuth内部已经会在权限存在时初始化音频服务
+    // 这里只需要记录状态即可
+    if (hasRecordAuth) {
+      console.log('✅ 录音权限检查完成，音频服务已初始化')
     } else {
       console.log('⚠️ 暂无录音权限，等待用户授权后再初始化音频服务')
     }
@@ -130,13 +130,35 @@ Page({
     this.setData({ currentDate })
   },
 
-  // 检查录音权限
-  checkRecordAuth() {
-    const recordAuth = app.globalData.recordAuth
-    this.setData({ recordAuth })
-    
-    if (!recordAuth) {
-      console.log('⚠️ 录音权限未授权')
+  // 检查录音权限（增强版）
+  async checkRecordAuth() {
+    try {
+      // 实时检查权限状态
+      const result = await wx.getSetting()
+      const recordAuth = !!result.authSetting['scope.record']
+      
+      // 更新全局数据和页面数据
+      app.globalData.recordAuth = recordAuth
+      this.setData({ recordAuth })
+      
+      console.log('🔍 录音权限检查结果:', {
+        authorized: recordAuth,
+        authSetting: result.authSetting
+      })
+      
+      if (!recordAuth) {
+        console.log('⚠️ 录音权限未授权，需要用户主动申请')
+      } else {
+        console.log('✅ 录音权限已授权')
+        // 权限已授权，初始化音频服务
+        this.initAudioService()
+      }
+      
+      return recordAuth
+    } catch (error) {
+      console.error('❌ 权限检查失败:', error)
+      this.setData({ recordAuth: false })
+      return false
     }
   },
 
@@ -384,6 +406,12 @@ Page({
     try {
       console.log('🔊 开始朗读:', currentSentence.content)
       
+      // 📊 添加TTS环境诊断
+      console.log('🔍 开始TTS环境诊断...')
+      const supportInfo = ttsService.getTTSSupportInfo()
+      const isSupported = ttsService.isSupported()
+      console.log('🎯 TTS支持状态:', isSupported)
+      
       // 更新播放状态
       this.setData({ isTTSPlaying: true })
       
@@ -393,27 +421,48 @@ Page({
         volume: 0.9
       })
       
+      console.log('📋 TTS服务返回结果:', result)
+      
       if (result.success) {
         console.log('✅ TTS播放完成')
       } else {
         console.log('ℹ️ TTS播放结果:', result.message)
+        
+        // 根据环境提供更具体的错误信息
         let errorMessage = result.message || 'TTS功能暂不可用'
-        if (errorMessage.includes('不支持') || errorMessage.includes('无法') || errorMessage.includes('播放失败')) {
-          errorMessage = '当前环境不支持语音播放功能'
+        
+        if (supportInfo.environment === 'browser') {
+          errorMessage = '微信开发者工具暂不支持语音朗读，请在真机上测试'
+        } else if (!supportInfo.wxCreateSynthesizeEngine && !supportInfo.speechSynthesis) {
+          errorMessage = '当前设备不支持语音合成功能'
+        } else {
+          errorMessage = '语音朗读服务暂时不可用，请稍后重试'
         }
+        
         wx.showToast({
           title: errorMessage,
           icon: 'none',
-          duration: 2000
+          duration: 3000
         })
       }
       
     } catch (error) {
       console.error('❌ TTS播放失败:', error)
+      
+      // 获取支持信息用于错误诊断
+      const supportInfo = ttsService.getTTSSupportInfo()
+      let errorMessage = '语音朗读功能遇到问题'
+      
+      if (supportInfo.environment === 'browser') {
+        errorMessage = '微信开发者工具不支持语音朗读，请在手机上测试'
+      } else {
+        errorMessage = '当前环境不支持语音播放功能'
+      }
+      
       wx.showToast({
-        title: '当前环境不支持语音播放功能',
+        title: errorMessage,
         icon: 'none',
-        duration: 2000
+        duration: 3000
       })
     } finally {
       // 重置播放状态
@@ -490,6 +539,41 @@ Page({
     // 直接使用音频服务处理过的高质量波形数据
     this.setData({ waveData })
     this.drawWaveform()
+  },
+
+  // 安全绘制圆角矩形的辅助函数
+  safeDrawRoundRect(ctx, x, y, width, height, radius) {
+    try {
+      if (ctx.roundRect && typeof ctx.roundRect === 'function') {
+        // 尝试使用新版 roundRect API
+        // 确保 radius 参数格式正确
+        const radiusArray = Array.isArray(radius) ? radius : [radius]
+        ctx.roundRect(x, y, width, height, radiusArray)
+      } else {
+        // 回退到手动绘制圆角矩形
+        this.drawRoundRectManually(ctx, x, y, width, height, radius)
+      }
+    } catch (error) {
+      // 如果所有方法都失败，使用普通矩形
+      console.warn('⚠️ 圆角矩形绘制失败，使用普通矩形:', error.message)
+      ctx.rect(x, y, width, height)
+    }
+  },
+
+  // 手动绘制圆角矩形（兼容性回退）
+  drawRoundRectManually(ctx, x, y, width, height, radius) {
+    const r = Math.min(radius, width / 2, height / 2)
+    
+    ctx.moveTo(x + r, y)
+    ctx.lineTo(x + width - r, y)
+    ctx.arcTo(x + width, y, x + width, y + r, r)
+    ctx.lineTo(x + width, y + height - r)
+    ctx.arcTo(x + width, y + height, x + width - r, y + height, r)
+    ctx.lineTo(x + r, y + height)
+    ctx.arcTo(x, y + height, x, y + height - r, r)
+    ctx.lineTo(x, y + r)
+    ctx.arcTo(x, y, x + r, y, r)
+    ctx.closePath()
   },
 
   // 绘制波形（增强版，修复Canvas 2D兼容性）
@@ -569,12 +653,8 @@ Page({
         
                  // 绘制圆角矩形条
          ctx.beginPath()
-         if (ctx.roundRect) {
-           ctx.roundRect(x, y, barWidth, barHeight, barWidth / 2)
-         } else {
-           // 兼容性回退：使用普通矩形
-           ctx.rect(x, y, barWidth, barHeight)
-         }
+         const radius = barWidth / 2
+         this.safeDrawRoundRect(ctx, x, y, barWidth, barHeight, radius)
          ctx.fill()
       }
     } else {
@@ -594,12 +674,8 @@ Page({
         const y = centerY - barHeight / 2
         
         ctx.beginPath()
-        if (ctx.roundRect) {
-          ctx.roundRect(x, y, barWidth, barHeight, barWidth / 2)
-        } else {
-          // 兼容性回退：使用普通矩形
-          ctx.rect(x, y, barWidth, barHeight)
-        }
+        const radius = barWidth / 2
+        this.safeDrawRoundRect(ctx, x, y, barWidth, barHeight, radius)
         ctx.fill()
       }
     }
@@ -872,6 +948,8 @@ Page({
       
       const authResult = await app.requestRecordAuth()
       if (authResult) {
+        // 更新全局和页面状态
+        app.globalData.recordAuth = true
         this.setData({
           recordAuth: true,
           showAuthModal: false
@@ -999,20 +1077,38 @@ Page({
 
   // 初始化云同步服务
   initCloudSync() {
-    // 获取同步状态
-    const syncStatus = cloudService.getSyncStatus()
-    
-    this.setData({
-      syncStatus
-    })
-    
-    // 启动时自动同步（如果启用）
-    const cloudSettings = cloudService.getCloudSettings()
-    if (cloudSettings.syncOnLaunch && syncStatus.isOnline) {
-      this.performAutoSync()
+    try {
+      // 获取同步状态
+      const syncStatus = cloudService.getSyncStatus()
+      
+      this.setData({
+        syncStatus
+      })
+      
+      // 启动时自动同步（如果启用）
+      const cloudSettings = cloudService.getCloudSettings()
+      if (cloudSettings.syncOnLaunch && syncStatus.isOnline) {
+        // 延迟执行，避免阻塞页面初始化
+        setTimeout(() => {
+          this.performAutoSync().catch(error => {
+            console.warn('🔄 启动时自动同步失败，这是正常现象，将在后台重试:', error.message)
+          })
+        }, 1000)
+      }
+      
+      console.log('☁️ 云同步服务已初始化')
+    } catch (error) {
+      console.error('☁️ 云同步服务初始化失败:', error)
+      // 设置默认状态
+      this.setData({
+        syncStatus: {
+          isOnline: false,
+          queueLength: 0,
+          lastSyncTime: null,
+          lastSyncDate: '从未同步'
+        }
+      })
     }
-    
-    console.log('☁️ 云同步服务已初始化')
   },
 
   // 同步练习记录到云端
@@ -1033,11 +1129,14 @@ Page({
 
   // 执行自动同步
   async performAutoSync() {
-    if (!this.data.syncStatus.isOnline) {
+    if (!this.data.syncStatus || !this.data.syncStatus.isOnline) {
+      console.log('🔄 网络不可用，跳过自动同步')
       return
     }
 
     try {
+      console.log('🔄 开始执行自动同步...')
+      
       // 显示同步指示器
       this.showSyncIndicator('syncing')
       
@@ -1050,10 +1149,24 @@ Page({
       
       // 显示同步成功
       this.showSyncIndicator('success')
+      console.log('✅ 自动同步完成')
       
     } catch (error) {
-      console.error('自动同步失败:', error)
-      this.showSyncIndicator('failed')
+      console.warn('⚠️ 自动同步失败:', error.message)
+      
+      // 更新同步状态
+      try {
+        const syncStatus = cloudService.getSyncStatus()
+        this.setData({ syncStatus })
+      } catch (statusError) {
+        console.error('获取同步状态失败:', statusError)
+      }
+      
+      // 只在开发环境显示失败指示器，生产环境静默处理
+      const isDevelopment = typeof __DEV__ !== 'undefined' ? __DEV__ : true
+      if (isDevelopment) {
+        this.showSyncIndicator('failed')
+      }
     }
   },
 
@@ -1074,23 +1187,36 @@ Page({
   // 显示同步指示器
   showSyncIndicator(type) {
     const indicators = {
-      syncing: { icon: '🔄', text: '同步中...' },
-      success: { icon: '✅', text: '同步完成' },
-      failed: { icon: '❌', text: '同步失败' }
+      syncing: { icon: '🔄', text: '数据同步中...', color: '#2196F3' },
+      success: { icon: '✅', text: '同步完成', color: '#4CAF50' },
+      failed: { icon: '⚠️', text: '同步失败，稍后重试', color: '#FF9800' }
     }
     
     const indicator = indicators[type]
     if (!indicator) return
+    
+    // 避免重复显示相同类型的指示器
+    if (this.data.showSyncIndicator && 
+        this.data.syncIndicator && 
+        this.data.syncIndicator.text === indicator.text) {
+      return
+    }
     
     this.setData({
       showSyncIndicator: true,
       syncIndicator: indicator
     })
     
-    // 3秒后自动隐藏
-    setTimeout(() => {
+    // 清除之前的定时器
+    if (this.syncIndicatorTimer) {
+      clearTimeout(this.syncIndicatorTimer)
+    }
+    
+    // 根据类型设置不同的显示时长
+    const duration = type === 'syncing' ? 5000 : 3000
+    this.syncIndicatorTimer = setTimeout(() => {
       this.setData({ showSyncIndicator: false })
-    }, 3000)
+    }, duration)
   },
 
   // 页面销毁时清理
@@ -1098,6 +1224,11 @@ Page({
     // 清理定时器
     if (this.recordTimer) {
       clearInterval(this.recordTimer)
+    }
+    
+    // 清理同步指示器定时器
+    if (this.syncIndicatorTimer) {
+      clearTimeout(this.syncIndicatorTimer)
     }
     
     // 清理录音服务
