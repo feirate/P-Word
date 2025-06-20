@@ -1,6 +1,8 @@
 const app = getApp()
 // 引入安全服务模块
 const security = require('../../services/security.js')
+// 引入高质量录音服务模块
+const audioService = require('../../services/audioService.js')
 
 Page({
   data: {
@@ -33,6 +35,10 @@ Page({
     canvasHeight: 60,
     waveData: [],
     
+    // 录音质量分析
+    audioQuality: null,
+    showQualityTip: false,
+    
     // 练习统计
     practiceStats: {
       sentenceCount: 0,
@@ -56,8 +62,8 @@ Page({
     // 检查录音权限
     this.checkRecordAuth()
     
-    // 初始化录音管理器
-    this.initRecorder()
+    // 初始化高质量录音服务
+    this.initAudioService()
     
     // 初始化Canvas
     this.initCanvas()
@@ -91,67 +97,74 @@ Page({
     }
   },
 
-  // 初始化录音管理器
-  initRecorder() {
-    this.recorderManager = wx.getRecorderManager()
-    
-    // 配置录音参数
-    this.recorderOptions = {
-      duration: 60000,        // 最大录音时长1分钟
-      sampleRate: 16000,      // 采样率
-      numberOfChannels: 1,    // 声道数
-      encodeBitRate: 96000,   // 编码码率
-      format: 'mp3',          // 音频格式
-      frameSize: 20          // 指定帧大小，单位 KB
-    }
-    
-    // 录音开始事件
-    this.recorderManager.onStart(() => {
-      console.log('🎤 录音开始')
-      this.setData({ 
-        isRecording: true,
-        recordDuration: 0,
-        waveData: []
-      })
+  // 初始化高质量录音服务
+  initAudioService() {
+    // 设置录音服务事件回调
+    audioService.setEventHandlers({
+      onRecordStart: () => {
+        console.log('🎤 高质量录音开始')
+        this.setData({ 
+          isRecording: true,
+          recordDuration: 0,
+          waveData: [],
+          audioQuality: null
+        })
+        this.startRecordTimer()
+      },
       
-      // 启动录音计时器
-      this.startRecordTimer()
-    })
-    
-    // 录音结束事件
-    this.recorderManager.onStop((res) => {
-      console.log('🎤 录音结束:', res)
+      onRecordStop: (result) => {
+        console.log('🎤 录音完成:', result)
+        
+        // 分析录音质量
+        const quality = audioService.analyzeAudioQuality()
+        
+        this.setData({
+          isRecording: false,
+          hasRecording: true,
+          audioPath: result.tempFilePath,
+          audioQuality: quality
+        })
+        
+        this.stopRecordTimer()
+        this.saveRecordingStats(result)
+        
+        // 显示录音质量提示
+        if (quality) {
+          this.showQualityFeedback(quality)
+        }
+      },
       
-      // 【安全】使用安全文件名
-      const secureFileName = security.generateSecureFileName('.mp3')
-      console.log('📁 安全文件名:', secureFileName)
+      onFrameRecorded: (waveData) => {
+        this.updateWaveform(waveData)
+      },
       
-      this.setData({
-        isRecording: false,
-        hasRecording: true,
-        audioPath: res.tempFilePath
-      })
+      onRecordError: (error) => {
+        console.error('🎤 录音错误:', error)
+        this.setData({ isRecording: false })
+        wx.showToast({
+          title: '录音失败，请重试',
+          icon: 'none',
+          duration: 2000
+        })
+      },
       
-      // 停止计时器
-      this.stopRecordTimer()
+      onPlayStart: () => {
+        console.log('▶️ 开始播放录音')
+        // 可以添加播放状态UI
+      },
       
-      // 保存录音记录（使用安全存储）
-      this.saveRecordingStats()
-    })
-    
-    // 录音帧数据事件（用于波形绘制）
-    this.recorderManager.onFrameRecorded((res) => {
-      const { frameBuffer } = res
-      this.updateWaveform(frameBuffer)
-    })
-    
-    // 录音错误事件
-    this.recorderManager.onError((res) => {
-      console.error('🎤 录音错误:', res)
-      wx.showToast({
-        title: '录音失败',
-        icon: 'none'
-      })
+      onPlayEnd: () => {
+        console.log('⏹️ 播放结束')
+        // 可以添加播放结束UI
+      },
+      
+      onPlayError: (error) => {
+        console.error('❌ 播放失败:', error)
+        wx.showToast({
+          title: '播放失败',
+          icon: 'none'
+        })
+      }
     })
   },
 
@@ -175,19 +188,25 @@ Page({
       return
     }
     
-    this.recorderManager.start(this.recorderOptions)
+    const success = audioService.startRecording()
+    if (!success) {
+      wx.showToast({
+        title: '录音启动失败',
+        icon: 'none'
+      })
+    }
   },
 
   // 停止录音
   stopRecording() {
     if (this.data.isRecording) {
-      this.recorderManager.stop()
+      audioService.stopRecording()
     }
   },
 
   // 播放录音
-  playRecording() {
-    if (!this.data.hasRecording || !this.data.audioPath) {
+  async playRecording() {
+    if (!this.data.hasRecording) {
       wx.showToast({
         title: '暂无录音',
         icon: 'none'
@@ -195,25 +214,23 @@ Page({
       return
     }
     
-    const audio = wx.createInnerAudioContext()
-    audio.src = this.data.audioPath
-    audio.play()
-    
-    audio.onError((res) => {
-      console.error('🔊 播放失败:', res)
-      wx.showToast({
-        title: '播放失败',
-        icon: 'none'
-      })
-    })
+    try {
+      await audioService.playRecording()
+    } catch (error) {
+      console.error('播放失败:', error)
+    }
   },
 
   // 重新录音
   reRecord() {
+    // 清理录音服务状态
+    audioService.cleanup()
+    
     this.setData({
       hasRecording: false,
       audioPath: '',
-      waveData: []
+      waveData: [],
+      audioQuality: null
     })
   },
 
@@ -258,23 +275,14 @@ Page({
     }
   },
 
-  // 更新波形显示
-  updateWaveform(frameBuffer) {
-    const data = new Int16Array(frameBuffer)
-    const waveData = []
-    
-    // 采样数据点
-    const sampleStep = Math.floor(data.length / 50)
-    for (let i = 0; i < data.length; i += sampleStep) {
-      const amplitude = Math.abs(data[i]) / 32768 // 归一化到 0-1
-      waveData.push(amplitude)
-    }
-    
+  // 更新波形显示（优化版）
+  updateWaveform(waveData) {
+    // 直接使用音频服务处理过的高质量波形数据
     this.setData({ waveData })
     this.drawWaveform()
   },
 
-  // 绘制波形
+  // 绘制波形（增强版）
   drawWaveform() {
     const { canvasWidth, canvasHeight, waveData } = this.data
     
@@ -285,24 +293,61 @@ Page({
     // 清除画布
     ctx.clearRect(0, 0, canvasWidth, canvasHeight)
     
+    // 绘制背景网格
+    ctx.setStrokeStyle('rgba(74, 144, 226, 0.1)')
+    ctx.setLineWidth(1)
+    for (let i = 0; i <= 4; i++) {
+      const y = (canvasHeight / 4) * i
+      ctx.beginPath()
+      ctx.moveTo(0, y)
+      ctx.lineTo(canvasWidth, y)
+      ctx.stroke()
+    }
+    
     // 设置波形样式
     ctx.setStrokeStyle('#4A90E2')
+    ctx.setFillStyle('rgba(74, 144, 226, 0.3)')
     ctx.setLineWidth(2)
     ctx.setLineCap('round')
     
-    // 绘制波形
-    const barWidth = canvasWidth / waveData.length
+    // 绘制波形区域
+    const barWidth = canvasWidth / Math.max(waveData.length, 1)
     const centerY = canvasHeight / 2
     
-    waveData.forEach((amplitude, index) => {
-      const x = index * barWidth
-      const height = amplitude * (canvasHeight * 0.8)
-      
+    if (waveData.length > 0) {
+      // 绘制填充区域
       ctx.beginPath()
-      ctx.moveTo(x, centerY - height / 2)
-      ctx.lineTo(x, centerY + height / 2)
+      ctx.moveTo(0, centerY)
+      
+      waveData.forEach((amplitude, index) => {
+        const x = index * barWidth
+        const height = amplitude * (canvasHeight * 0.7)
+        ctx.lineTo(x, centerY - height / 2)
+      })
+      
+      waveData.slice().reverse().forEach((amplitude, index) => {
+        const x = (waveData.length - 1 - index) * barWidth
+        const height = amplitude * (canvasHeight * 0.7)
+        ctx.lineTo(x, centerY + height / 2)
+      })
+      
+      ctx.closePath()
+      ctx.fill()
+      
+      // 绘制波形线条
+      ctx.beginPath()
+      waveData.forEach((amplitude, index) => {
+        const x = index * barWidth
+        const height = amplitude * (canvasHeight * 0.7)
+        
+        if (index === 0) {
+          ctx.moveTo(x, centerY - height / 2)
+        } else {
+          ctx.lineTo(x, centerY - height / 2)
+        }
+      })
       ctx.stroke()
-    })
+    }
     
     ctx.draw()
   },
@@ -423,12 +468,61 @@ Page({
     }
   },
 
+  // 显示录音质量反馈
+  showQualityFeedback(quality) {
+    let title = '录音质量分析'
+    let content = `总评分：${quality.quality}分\n`
+    
+    if (quality.quality >= 80) {
+      title = '🎉 录音质量优秀'
+      content += '音质清晰，录音效果很好！'
+    } else if (quality.quality >= 60) {
+      title = '👍 录音质量良好'
+      content += '录音效果不错，继续保持！'
+    } else {
+      title = '💡 录音质量提示'
+      const tips = []
+      
+      if (quality.avgVolume < 20) {
+        tips.push('音量偏低，请靠近话筒')
+      }
+      if (quality.stability < 70) {
+        tips.push('音量不够稳定，保持匀速说话')
+      }
+      if (quality.silenceRatio > 30) {
+        tips.push('静音时间较长，说话更连贯')
+      }
+      if (quality.clippingRatio > 5) {
+        tips.push('音量过大，请降低说话音量')
+      }
+      
+      content += tips.length > 0 ? tips.join('\n') : '继续练习会更好！'
+    }
+    
+    wx.showModal({
+      title,
+      content,
+      showCancel: false,
+      confirmText: '知道了'
+    })
+  },
+
+  // 切换质量提示显示
+  toggleQualityTip() {
+    this.setData({
+      showQualityTip: !this.data.showQualityTip
+    })
+  },
+
   // 页面销毁时清理
   onUnload() {
     // 清理定时器
     if (this.recordTimer) {
       clearInterval(this.recordTimer)
     }
+    
+    // 清理录音服务
+    audioService.cleanup()
     
     // 【安全】清理临时文件（24小时后）
     const tempFiles = wx.getStorageSync('temp_audio_files') || []

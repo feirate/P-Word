@@ -366,6 +366,106 @@
   }
 }
 
+/* 录音质量显示 */
+.audio-quality {
+  margin-top: 16rpx;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 12rpx;
+  padding: 16rpx;
+  backdrop-filter: blur(10rpx);
+}
+
+.quality-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+}
+
+.quality-score {
+  font-size: 28rpx;
+  font-weight: 500;
+  color: var(--primary-color);
+}
+
+.quality-toggle {
+  font-size: 24rpx;
+  color: var(--text-secondary);
+  transition: transform 0.3s ease;
+}
+
+.quality-details {
+  margin-top: 16rpx;
+  animation: fadeIn 0.3s ease;
+}
+
+.quality-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12rpx;
+  gap: 16rpx;
+}
+
+.quality-item:last-child {
+  margin-bottom: 0;
+}
+
+.quality-label {
+  font-size: 24rpx;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  min-width: 120rpx;
+}
+
+.quality-bar {
+  flex: 1;
+  height: 8rpx;
+  background: rgba(74, 144, 226, 0.2);
+  border-radius: 4rpx;
+  overflow: hidden;
+  position: relative;
+}
+
+.quality-bar.warning {
+  background: rgba(245, 34, 45, 0.2);
+}
+
+.quality-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4A90E2, #67C23A);
+  border-radius: 4rpx;
+  transition: width 0.5s ease;
+}
+
+.quality-bar.warning .quality-fill {
+  background: linear-gradient(90deg, #F5222D, #FA8C16);
+}
+
+.quality-value {
+  font-size: 24rpx;
+  color: var(--text-color);
+  font-weight: 500;
+  min-width: 60rpx;
+  text-align: right;
+}
+
+/* 高质量录音提示 */
+.quality-excellent {
+  background: linear-gradient(135deg, rgba(103, 194, 58, 0.1), rgba(74, 144, 226, 0.1));
+  border: 2rpx solid rgba(103, 194, 58, 0.3);
+}
+
+.quality-good {
+  background: linear-gradient(135deg, rgba(74, 144, 226, 0.1), rgba(135, 208, 104, 0.1));
+  border: 2rpx solid rgba(74, 144, 226, 0.3);
+}
+
+.quality-poor {
+  background: linear-gradient(135deg, rgba(245, 34, 45, 0.1), rgba(250, 140, 22, 0.1));
+  border: 2rpx solid rgba(245, 34, 45, 0.3);
+}
+
 /* 响应式适配 */
 @media (max-width: 375px) {
   .sentence-text {
@@ -379,5 +479,15 @@
   
   .record-icon {
     font-size: 40rpx;
+  }
+  
+  .quality-label {
+    min-width: 100rpx;
+    font-size: 22rpx;
+  }
+  
+  .quality-value {
+    min-width: 50rpx;
+    font-size: 22rpx;
   }
 } 

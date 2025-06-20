@@ -48,6 +48,41 @@
     <view class="record-time" wx:if="{{isRecording || recordDuration > 0}}">
       <text>{{recordDurationText}}</text>
     </view>
+    
+    <!-- 录音质量显示 -->
+    <view class="audio-quality" wx:if="{{audioQuality}}">
+      <view class="quality-header" bindtap="toggleQualityTip">
+        <text class="quality-score">🎵 质量评分: {{audioQuality.quality}}分</text>
+        <text class="quality-toggle">{{showQualityTip ? '▲' : '▼'}}</text>
+      </view>
+      
+      <!-- 详细质量信息 -->
+      <view class="quality-details" wx:if="{{showQualityTip}}">
+        <view class="quality-item">
+          <text class="quality-label">平均音量</text>
+          <view class="quality-bar">
+            <view class="quality-fill" style="width: {{audioQuality.avgVolume}}%"></view>
+          </view>
+          <text class="quality-value">{{audioQuality.avgVolume}}%</text>
+        </view>
+        
+        <view class="quality-item">
+          <text class="quality-label">音量稳定性</text>
+          <view class="quality-bar">
+            <view class="quality-fill" style="width: {{audioQuality.stability}}%"></view>
+          </view>
+          <text class="quality-value">{{audioQuality.stability}}%</text>
+        </view>
+        
+        <view class="quality-item" wx:if="{{audioQuality.silenceRatio > 20}}">
+          <text class="quality-label">静音比例</text>
+          <view class="quality-bar warning">
+            <view class="quality-fill" style="width: {{audioQuality.silenceRatio}}%"></view>
+          </view>
+          <text class="quality-value">{{audioQuality.silenceRatio}}%</text>
+        </view>
+      </view>
+    </view>
   </view>
 
   <!-- 录音控制区域 -->
@@ -83,7 +118,7 @@
       </button>
 
       <!-- 下一句按钮 -->
-      <button class="action-btn" bindtap="nextSentence">
+      <button class="action-btn" bindtap="switchSentence">
         <text class="action-icon">⏭️</text>
         <text class="action-text">下一句</text>
       </button>
@@ -91,7 +126,7 @@
       <!-- 重新录音按钮 -->
       <button 
         class="action-btn" 
-        bindtap="resetRecording"
+        bindtap="reRecord"
         disabled="{{!hasRecording}}"
       >
         <text class="action-icon">🔄</text>
