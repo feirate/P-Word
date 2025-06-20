@@ -3,6 +3,8 @@ const app = getApp()
 const security = require('../../services/security.js')
 // 引入高质量录音服务模块
 const audioService = require('../../services/audioService.js')
+// 引入智能语料库服务模块
+const sentenceService = require('../../services/sentenceService.js')
 
 Page({
   data: {
@@ -11,16 +13,15 @@ Page({
     todayPracticeTime: 0,
     
     // 句子相关
-    currentSentence: {
-      id: 'sentence_001',
-      content: 'Hello, how are you today?',
-      translation: '你好，你今天怎么样？',
-      level: '初级',
-      category: '日常对话'
-    },
+    currentSentence: null,
     currentIndex: 0,
-    totalSentences: 50,
+    totalSentences: 0,
     showTranslation: false,
+    
+    // 语料库相关
+    availableCategories: [],
+    selectedCategory: '',
+    recommendationMode: 'smart', // 'smart', 'sequential', 'random'
     
     // 录音相关
     isRecording: false,
@@ -68,8 +69,8 @@ Page({
     // 初始化Canvas
     this.initCanvas()
     
-    // 加载当前句子
-    this.loadCurrentSentence()
+    // 初始化语料库系统
+    this.initSentenceSystem()
     
     // 加载今日统计（使用安全存储）
     this.loadTodayStats()
@@ -236,13 +237,23 @@ Page({
 
   // 切换句子
   switchSentence() {
-    this.loadCurrentSentence()
+    const nextSentence = this.getNextSentence()
+    
+    if (nextSentence) {
+      this.setData({
+        currentSentence: nextSentence,
+        showTranslation: false
+      })
+      
+      console.log(`🔄 切换到句子: [${nextSentence.level}] ${nextSentence.content}`)
+    }
     
     // 清除当前录音
     this.setData({
       hasRecording: false,
       audioPath: '',
-      waveData: []
+      waveData: [],
+      audioQuality: null
     })
   },
 
@@ -352,34 +363,102 @@ Page({
     ctx.draw()
   },
 
-  // 加载当前句子
-  loadCurrentSentence() {
-    // 模拟从语料库加载句子
-    const sentences = [
-      { id: 'sentence_001', content: 'Hello, how are you today?', translation: '你好，你今天怎么样？' },
-      { id: 'sentence_002', content: 'What time is it now?', translation: '现在几点了？' },
-      { id: 'sentence_003', content: 'I would like to have some coffee.', translation: '我想要一些咖啡。' },
-      { id: 'sentence_004', content: 'Where is the nearest subway station?', translation: '最近的地铁站在哪里？' },
-      { id: 'sentence_005', content: 'Could you please help me?', translation: '你能帮助我吗？' }
-    ]
-    
-    const randomIndex = Math.floor(Math.random() * sentences.length)
-    const sentence = sentences[randomIndex]
-    
-    this.setData({
-      currentSentence: {
-        ...sentence,
-        level: '初级',
-        category: '日常对话'
-      },
-      currentIndex: randomIndex + 1,
-      showTranslation: false
-    })
+  // 初始化语料库系统
+  async initSentenceSystem() {
+    try {
+      console.log('🚀 初始化语料库系统...')
+      
+      // 等待语料库加载完成
+      await sentenceService.initService()
+      
+      // 获取可用分类
+      const categories = sentenceService.getAllCategories()
+      
+      // 获取推荐句子
+      const recommendedSentence = sentenceService.getRecommendedSentence()
+      
+      // 更新页面数据
+      this.setData({
+        currentSentence: recommendedSentence,
+        totalSentences: sentenceService.getTotalCount(),
+        availableCategories: categories
+      })
+      
+      console.log('✅ 语料库系统初始化完成')
+      console.log(`📊 语料库统计: ${sentenceService.getTotalCount()} 句，${categories.length} 个分类`)
+      
+    } catch (error) {
+      console.error('❌ 语料库系统初始化失败:', error)
+      
+      // 使用备用句子
+      this.setData({
+        currentSentence: {
+          id: 'fallback_001',
+          content: 'Hello, how are you?',
+          translation: '你好，你好吗？',
+          level: '初级',
+          category: '问候',
+          difficulty: 1
+        },
+        totalSentences: 1,
+        availableCategories: ['问候']
+      })
+    }
+  },
+
+  // 获取下一个推荐句子
+  getNextSentence() {
+    const { recommendationMode, selectedCategory } = this.data
+    let nextSentence = null
+
+    switch (recommendationMode) {
+      case 'smart':
+        // 智能推荐（考虑用户水平、练习历史等）
+        nextSentence = sentenceService.getRecommendedSentence({
+          excludeCompleted: true,
+          smartRecommend: true
+        })
+        break
+        
+      case 'category':
+        // 按分类筛选
+        if (selectedCategory) {
+          const categorySentences = sentenceService.getSentencesByCategory(selectedCategory)
+          if (categorySentences.length > 0) {
+            const randomIndex = Math.floor(Math.random() * categorySentences.length)
+            nextSentence = categorySentences[randomIndex]
+          }
+        }
+        break
+        
+      case 'sequential':
+        // 顺序练习
+        const currentIndex = this.data.currentIndex
+        const totalSentences = sentenceService.getTotalCount()
+        const nextIndex = (currentIndex + 1) % totalSentences
+        nextSentence = sentenceService.sentences[nextIndex]
+        this.setData({ currentIndex: nextIndex })
+        break
+        
+      default:
+        // 随机选择
+        nextSentence = sentenceService.getRecommendedSentence({
+          excludeCompleted: false,
+          smartRecommend: false
+        })
+    }
+
+    return nextSentence || sentenceService.getCurrentSentence()
   },
 
   // 【安全】保存录音统计（使用加密存储）
-  saveRecordingStats() {
-    const { recordDuration, currentSentence } = this.data
+  saveRecordingStats(recordResult) {
+    const { recordDuration, currentSentence, audioQuality } = this.data
+    
+    if (!currentSentence) {
+      console.warn('⚠️ 当前句子为空，跳过统计保存')
+      return
+    }
     
     // 获取当前统计
     const currentStats = security.secureGet('practice_stats') || {
@@ -394,6 +473,7 @@ Page({
       ...currentStats,
       sentenceCount: currentStats.sentenceCount + 1,
       totalTime: currentStats.totalTime + recordDuration,
+      bestScore: Math.max(currentStats.bestScore || 0, audioQuality?.quality || 0),
       lastPracticeDate: new Date().toISOString(),
       // 【隐私保护】不保存具体录音内容，仅保存统计信息
       version: '1.0',
@@ -403,6 +483,15 @@ Page({
     // 【安全】使用加密存储
     security.secureStorage('practice_stats', updatedStats)
     
+    // 记录到语料库服务的练习历史
+    sentenceService.recordPractice({
+      sentenceId: currentSentence.id,
+      category: currentSentence.category,
+      difficulty: currentSentence.difficulty || 1,
+      quality: audioQuality?.quality || 60,
+      duration: recordDuration
+    })
+    
     // 更新页面显示
     this.setData({
       practiceStats: updatedStats,
@@ -410,6 +499,7 @@ Page({
     })
     
     console.log('📊 练习统计已保存（加密）')
+    console.log('📝 练习历史已记录到语料库服务')
   },
 
   // 【安全】加载今日统计（使用安全读取）
@@ -512,6 +602,56 @@ Page({
     this.setData({
       showQualityTip: !this.data.showQualityTip
     })
+  },
+
+  // 切换推荐模式
+  toggleRecommendationMode() {
+    const modes = ['smart', 'category', 'random']
+    const currentIndex = modes.indexOf(this.data.recommendationMode)
+    const nextIndex = (currentIndex + 1) % modes.length
+    const nextMode = modes[nextIndex]
+
+    this.setData({
+      recommendationMode: nextMode,
+      selectedCategory: '' // 重置分类选择
+    })
+
+    const modeNames = {
+      smart: '智能推荐',
+      category: '分类筛选',
+      random: '随机练习'
+    }
+
+    wx.showToast({
+      title: `切换到${modeNames[nextMode]}`,
+      icon: 'none',
+      duration: 1500
+    })
+
+    console.log(`🔄 推荐模式切换到: ${nextMode}`)
+  },
+
+  // 选择分类
+  selectCategory(e) {
+    const category = e.currentTarget.dataset.category || ''
+    
+    this.setData({
+      selectedCategory: category
+    })
+
+    // 根据选择的分类获取新句子
+    if (this.data.recommendationMode === 'category') {
+      const nextSentence = this.getNextSentence()
+      if (nextSentence) {
+        this.setData({
+          currentSentence: nextSentence,
+          showTranslation: false
+        })
+      }
+    }
+
+    const categoryName = category || '全部分类'
+    console.log(`📂 选择分类: ${categoryName}`)
   },
 
   // 页面销毁时清理

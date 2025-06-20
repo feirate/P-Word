@@ -1,0 +1,272 @@
+[
+  {
+    "id": "intermediate_001",
+    "content": "Could you please help me with this problem?",
+    "translation": "你能帮我解决这个问题吗？",
+    "level": "中级",
+    "category": "求助",
+    "tags": ["help", "polite", "problem"],
+    "difficulty": 2
+  },
+  {
+    "id": "intermediate_002",
+    "content": "I'd like to make a reservation for two people.",
+    "translation": "我想预订两个人的位子。",
+    "level": "中级",
+    "category": "餐厅",
+    "tags": ["restaurant", "booking", "formal"],
+    "difficulty": 2
+  },
+  {
+    "id": "intermediate_003",
+    "content": "What's the weather like today?",
+    "translation": "今天天气怎么样？",
+    "level": "中级",
+    "category": "天气",
+    "tags": ["weather", "conversation", "daily"],
+    "difficulty": 2
+  },
+  {
+    "id": "intermediate_004",
+    "content": "I'm looking forward to hearing from you.",
+    "translation": "我期待收到您的回复。",
+    "level": "中级",
+    "category": "商务",
+    "tags": ["business", "formal", "email"],
+    "difficulty": 2
+  },
+  {
+    "id": "intermediate_005",
+    "content": "Can you recommend a good restaurant nearby?",
+    "translation": "你能推荐附近的好餐厅吗？",
+    "level": "中级",
+    "category": "旅游",
+    "tags": ["travel", "restaurant", "recommendation"],
+    "difficulty": 2
+  },
+  {
+    "id": "intermediate_006",
+    "content": "I'm afraid I don't understand what you mean.",
+    "translation": "恐怕我不明白您的意思。",
+    "level": "中级",
+    "category": "沟通",
+    "tags": ["confusion", "polite", "clarification"],
+    "difficulty": 2
+  },
+  {
+    "id": "intermediate_007",
+    "content": "Would you mind if I opened the window?",
+    "translation": "我开窗您介意吗？",
+    "level": "中级",
+    "category": "礼貌询问",
+    "tags": ["permission", "polite", "indoor"],
+    "difficulty": 2
+  },
+  {
+    "id": "intermediate_008",
+    "content": "I'm running late for my appointment.",
+    "translation": "我约会要迟到了。",
+    "level": "中级",
+    "category": "时间",
+    "tags": ["time", "schedule", "urgent"],
+    "difficulty": 2
+  },
+  {
+    "id": "intermediate_009",
+    "content": "That sounds like a great idea to me.",
+    "translation": "我觉得这听起来是个好主意。",
+    "level": "中级",
+    "category": "赞同",
+    "tags": ["agreement", "opinion", "positive"],
+    "difficulty": 2
+  },
+  {
+    "id": "intermediate_010",
+    "content": "I've been working here for three years.",
+    "translation": "我在这里工作了三年。",
+    "level": "中级",
+    "category": "工作",
+    "tags": ["work", "experience", "duration"],
+    "difficulty": 2
+  },
+  {
+    "id": "intermediate_011",
+    "content": "Let me think about it and get back to you.",
+    "translation": "让我考虑一下再回复您。",
+    "level": "中级",
+    "category": "商务",
+    "tags": ["business", "consideration", "delay"],
+    "difficulty": 2
+  },
+  {
+    "id": "intermediate_012",
+    "content": "The traffic was terrible this morning.",
+    "translation": "今天早上交通状况很糟糕。",
+    "level": "中级",
+    "category": "交通",
+    "tags": ["traffic", "complaint", "morning"],
+    "difficulty": 2
+  },
+  {
+    "id": "intermediate_013",
+    "content": "I'm trying to lose some weight recently.",
+    "translation": "我最近在尝试减肥。",
+    "level": "中级",
+    "category": "健康",
+    "tags": ["health", "diet", "personal"],
+    "difficulty": 2
+  },
+  {
+    "id": "intermediate_014",
+    "content": "Could you speak a little slower, please?",
+    "translation": "请您说慢一点好吗？",
+    "level": "中级",
+    "category": "沟通",
+    "tags": ["communication", "speed", "polite"],
+    "difficulty": 2
+  },
+  {
+    "id": "intermediate_015",
+    "content": "I'm planning to visit Japan next month.",
+    "translation": "我计划下个月去日本。",
+    "level": "中级",
+    "category": "旅游",
+    "tags": ["travel", "planning", "future"],
+    "difficulty": 2
+  },
+  {
+    "id": "intermediate_016",
+    "content": "This movie is absolutely fantastic!",
+    "translation": "这部电影绝对精彩！",
+    "level": "中级",
+    "category": "娱乐",
+    "tags": ["entertainment", "movie", "praise"],
+    "difficulty": 2
+  },
+  {
+    "id": "intermediate_017",
+    "content": "I'm not feeling very well today.",
+    "translation": "我今天感觉不太舒服。",
+    "level": "中级",
+    "category": "健康",
+    "tags": ["health", "illness", "personal"],
+    "difficulty": 2
+  },
+  {
+    "id": "intermediate_018",
+    "content": "Would it be possible to reschedule our meeting?",
+    "translation": "可以重新安排我们的会议时间吗？",
+    "level": "中级",
+    "category": "商务",
+    "tags": ["business", "meeting", "schedule"],
+    "difficulty": 2
+  },
+  {
+    "id": "intermediate_019",
+    "content": "I completely agree with your point of view.",
+    "translation": "我完全同意您的观点。",
+    "level": "中级",
+    "category": "讨论",
+    "tags": ["agreement", "opinion", "formal"],
+    "difficulty": 2
+  },
+  {
+    "id": "intermediate_020",
+    "content": "The project deadline is approaching quickly.",
+    "translation": "项目截止日期快到了。",
+    "level": "中级",
+    "category": "工作",
+    "tags": ["work", "deadline", "urgency"],
+    "difficulty": 2
+  },
+  {
+    "id": "intermediate_021",
+    "content": "I'd like to apply for this position.",
+    "translation": "我想申请这个职位。",
+    "level": "中级",
+    "category": "求职",
+    "tags": ["job", "application", "formal"],
+    "difficulty": 2
+  },
+  {
+    "id": "intermediate_022",
+    "content": "Can you give me some advice on this matter?",
+    "translation": "您能就这件事给我一些建议吗？",
+    "level": "中级",
+    "category": "建议",
+    "tags": ["advice", "help", "formal"],
+    "difficulty": 2
+  },
+  {
+    "id": "intermediate_023",
+    "content": "I'm having trouble with my computer.",
+    "translation": "我的电脑出了问题。",
+    "level": "中级",
+    "category": "技术",
+    "tags": ["technology", "problem", "computer"],
+    "difficulty": 2
+  },
+  {
+    "id": "intermediate_024",
+    "content": "The cost of living here is quite expensive.",
+    "translation": "这里的生活成本相当高。",
+    "level": "中级",
+    "category": "生活",
+    "tags": ["living", "cost", "expensive"],
+    "difficulty": 2
+  },
+  {
+    "id": "intermediate_025",
+    "content": "I need to catch up on my work this weekend.",
+    "translation": "我需要在这个周末赶工作进度。",
+    "level": "中级",
+    "category": "工作",
+    "tags": ["work", "weekend", "catch-up"],
+    "difficulty": 2
+  },
+  {
+    "id": "intermediate_026",
+    "content": "What's your favorite type of music?",
+    "translation": "你最喜欢什么类型的音乐？",
+    "level": "中级",
+    "category": "兴趣",
+    "tags": ["music", "preference", "hobby"],
+    "difficulty": 2
+  },
+  {
+    "id": "intermediate_027",
+    "content": "I'm saving money for a new car.",
+    "translation": "我在为买新车存钱。",
+    "level": "中级",
+    "category": "财务",
+    "tags": ["money", "saving", "car"],
+    "difficulty": 2
+  },
+  {
+    "id": "intermediate_028",
+    "content": "Could you please send me the details by email?",
+    "translation": "您能通过邮件给我发送详细信息吗？",
+    "level": "中级",
+    "category": "商务",
+    "tags": ["business", "email", "details"],
+    "difficulty": 2
+  },
+  {
+    "id": "intermediate_029",
+    "content": "I'm looking for a gift for my friend's birthday.",
+    "translation": "我在为朋友的生日寻找礼物。",
+    "level": "中级",
+    "category": "购物",
+    "tags": ["shopping", "gift", "birthday"],
+    "difficulty": 2
+  },
+  {
+    "id": "intermediate_030",
+    "content": "The presentation went very well today.",
+    "translation": "今天的演示非常成功。",
+    "level": "中级",
+    "category": "工作",
+    "tags": ["work", "presentation", "success"],
+    "difficulty": 2
+  }
+] 

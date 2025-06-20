@@ -18,15 +18,47 @@
     <view class="sentence-header">
       <text class="sentence-level">{{currentSentence.level}}</text>
       <text class="sentence-count">{{currentIndex + 1}}/{{totalSentences}}</text>
+      
+      <!-- 推荐模式切换 -->
+      <view class="recommendation-mode" bindtap="toggleRecommendationMode">
+        <text class="mode-icon">
+          {{recommendationMode === 'smart' ? '🧠' : recommendationMode === 'category' ? '📂' : '🔀'}}
+        </text>
+      </view>
     </view>
     
     <view class="sentence-content">
       <text class="sentence-text">{{currentSentence.content}}</text>
+      
+      <!-- 句子分类标签 -->
+      <view class="sentence-tags" wx:if="{{currentSentence.category}}">
+        <text class="category-tag">{{currentSentence.category}}</text>
+        <text class="difficulty-tag" wx:if="{{currentSentence.difficulty}}">
+          难度{{currentSentence.difficulty}}
+        </text>
+      </view>
     </view>
     
     <!-- 翻译（可展开） -->
     <view class="translation" wx:if="{{showTranslation}}">
       <text class="translation-text text-secondary">{{currentSentence.translation}}</text>
+    </view>
+    
+    <!-- 分类筛选（当模式为category时显示） -->
+    <view class="category-filter" wx:if="{{recommendationMode === 'category'}}">
+      <scroll-view class="category-scroll" scroll-x>
+        <view class="category-item {{selectedCategory === '' ? 'active' : ''}}" 
+              bindtap="selectCategory" data-category="">
+          <text>全部</text>
+        </view>
+        <view class="category-item {{selectedCategory === item ? 'active' : ''}}" 
+              wx:for="{{availableCategories}}" 
+              wx:key="*this"
+              bindtap="selectCategory" 
+              data-category="{{item}}">
+          <text>{{item}}</text>
+        </view>
+      </scroll-view>
     </view>
     
     <!-- 展开翻译按钮 -->
