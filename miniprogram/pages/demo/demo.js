@@ -7,6 +7,7 @@ const audioService = require('../../services/audioService.js')
 const sentenceService = require('../../services/sentenceService.js')
 const cloudService = require('../../services/cloudService.js')
 const security = require('../../services/security.js')
+const ttsService = require('../../services/ttsService.js')
 
 Page({
   data: {
@@ -19,7 +20,9 @@ Page({
       { name: '录音测试', icon: '🎤' },
       { name: '语料库', icon: '📚' },
       { name: '云同步', icon: '☁️' },
-      { name: '数据分析', icon: '📊' }
+      { name: '数据分析', icon: '📊' },
+      { name: 'TTS测试', icon: '🔊' },
+      { name: '权限诊断', icon: '🔧' }
     ],
     
     // 录音测试相关
@@ -72,12 +75,22 @@ Page({
     // 测试日志
     testLogs: [],
     showDebugPanel: false,
-    currentColor: '#2196F3'
+    currentColor: '#2196F3',
+    testText: 'Hello, this is a test sentence.',
+    ttsSupported: false,
+    ttsInfo: null,
+    testResult: '',
+    isPlaying: false,
+    
+    // 权限诊断相关
+    permissionInfo: {},
+    lastCheckTime: null
   },
 
   onLoad() {
     console.log('🎬 Demo页面加载')
     this.initDemo()
+    this.checkTTSSupport()
   },
 
   // 初始化Demo环境
@@ -480,5 +493,167 @@ Page({
       currentColor: color
     })
     console.log('图标颜色变更为:', color)
+  },
+
+  // 检查TTS支持情况
+  checkTTSSupport() {
+    const isSupported = ttsService.isSupported()
+    const supportInfo = ttsService.getTTSSupportInfo()
+    
+    this.setData({
+      ttsSupported: isSupported,
+      ttsInfo: supportInfo
+    })
+    
+    console.log('🔍 TTS支持检查完成:', { isSupported, supportInfo })
+  },
+
+  // 测试TTS播放
+  async testTTS() {
+    if (this.data.isPlaying) {
+      return
+    }
+
+    this.setData({ 
+      isPlaying: true,
+      testResult: '正在测试...'
+    })
+
+    try {
+      console.log('🎯 开始TTS测试...')
+      
+      const result = await ttsService.playText(this.data.testText, {
+        rate: 1.0,
+        volume: 1.0
+      })
+      
+      console.log('📊 TTS测试结果:', result)
+      
+      this.setData({
+        testResult: result.success ? '✅ 播放成功！' : `❌ 播放失败: ${result.message}`
+      })
+      
+    } catch (error) {
+      console.error('❌ TTS测试异常:', error)
+      this.setData({
+        testResult: `❌ 测试异常: ${error.message}`
+      })
+    } finally {
+      this.setData({ isPlaying: false })
+    }
+  },
+
+  // 输入框变化
+  onTextInput(e) {
+    this.setData({
+      testText: e.detail.value
+    })
+  },
+
+  // 权限诊断相关方法
+  async checkAllPermissions() {
+    try {
+      const result = await wx.getSetting()
+      const authSetting = result.authSetting || {}
+      
+      const permissionInfo = {
+        record: authSetting['scope.record'],
+        camera: authSetting['scope.camera'],
+        userInfo: authSetting['scope.userInfo'],
+        writePhotosAlbum: authSetting['scope.writePhotosAlbum']
+      }
+      
+      this.setData({
+        permissionInfo,
+        lastCheckTime: new Date().toLocaleTimeString()
+      })
+      
+      this.addLog(`🔍 权限检查完成: ${JSON.stringify(permissionInfo)}`)
+      
+    } catch (error) {
+      this.addLog(`❌ 权限检查失败: ${error.message}`)
+    }
+  },
+
+  async testRecordPermission() {
+    try {
+      this.addLog('🎤 开始测试录音权限...')
+      
+      // 检查当前权限状态
+      await this.checkAllPermissions()
+      
+      if (!this.data.permissionInfo.record) {
+        this.addLog('⚠️ 未授权录音权限，尝试申请...')
+        
+        const authResult = await wx.authorize({
+          scope: 'scope.record'
+        })
+        
+        this.addLog('✅ 录音权限申请成功')
+        await this.checkAllPermissions()
+        
+      } else {
+        this.addLog('✅ 录音权限已存在')
+      }
+      
+      // 测试录音功能
+      const recorderManager = wx.getRecorderManager()
+      
+      recorderManager.onStart(() => {
+        this.addLog('🎤 录音测试开始')
+        setTimeout(() => {
+          recorderManager.stop()
+        }, 1000) // 录音1秒
+      })
+      
+      recorderManager.onStop((res) => {
+        this.addLog(`✅ 录音测试成功: ${res.tempFilePath}`)
+      })
+      
+      recorderManager.onError((error) => {
+        this.addLog(`❌ 录音测试失败: ${error.errMsg}`)
+      })
+      
+      recorderManager.start({
+        duration: 2000,
+        sampleRate: 16000,
+        numberOfChannels: 1,
+        encodeBitRate: 96000,
+        format: 'mp3'
+      })
+      
+    } catch (error) {
+      this.addLog(`❌ 录音权限测试异常: ${error.message}`)
+      
+      if (error.errMsg && error.errMsg.includes('auth deny')) {
+        this.addLog('💡 用户拒绝了权限申请，请手动到设置中开启')
+        wx.showModal({
+          title: '需要录音权限',
+          content: '请在设置中开启录音权限后重试',
+          confirmText: '去设置',
+          success: (res) => {
+            if (res.confirm) {
+              wx.openSetting()
+            }
+          }
+        })
+      }
+    }
+  },
+
+  // 重置权限状态
+  async resetPermissions() {
+    try {
+      const result = await wx.openSetting()
+      this.addLog('🔄 设置页面已打开，请手动设置权限')
+      
+      // 重新检查权限
+      setTimeout(() => {
+        this.checkAllPermissions()
+      }, 1000)
+      
+    } catch (error) {
+      this.addLog(`❌ 打开设置失败: ${error.message}`)
+    }
   }
 }) 

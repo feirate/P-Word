@@ -33,15 +33,26 @@ App({
 
   // 检查录音权限
   checkRecordAuth() {
-    wx.getSetting({
-      success: (res) => {
-        if (res.authSetting['scope.record']) {
-          this.globalData.recordAuth = true
-          console.log('✅ 录音权限已授权')
-        } else {
-          console.log('⚠️ 录音权限未授权')
+    return new Promise((resolve) => {
+      wx.getSetting({
+        success: (res) => {
+          const hasAuth = !!res.authSetting['scope.record']
+          this.globalData.recordAuth = hasAuth
+          
+          if (hasAuth) {
+            console.log('✅ 录音权限已授权')
+          } else {
+            console.log('⚠️ 录音权限未授权')
+          }
+          
+          resolve(hasAuth)
+        },
+        fail: (error) => {
+          console.error('❌ 权限检查失败:', error)
+          this.globalData.recordAuth = false
+          resolve(false)
         }
-      }
+      })
     })
   },
 

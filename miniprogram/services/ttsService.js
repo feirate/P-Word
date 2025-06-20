@@ -229,10 +229,44 @@ class TTSService {
    * 检查是否支持TTS
    */
   isSupported() {
+    const checks = {
+      wxCreateSynthesizeEngine: !!wx.createSynthesizeEngine,
+      speechSynthesis: typeof speechSynthesis !== 'undefined',
+      speechSynthesisUtterance: typeof SpeechSynthesisUtterance !== 'undefined',
+      innerAudioContext: !!wx.createInnerAudioContext
+    };
+    
+    console.log('🔍 TTS环境检测结果:', checks);
+    
     return !!(
       wx.createSynthesizeEngine || 
       (typeof SpeechSynthesisUtterance !== 'undefined')
     );
+  }
+
+  /**
+   * 获取详细的TTS支持信息
+   */
+  getTTSSupportInfo() {
+    const info = {
+      platform: wx.getSystemInfoSync().platform,
+      environment: 'unknown',
+      wxCreateSynthesizeEngine: !!wx.createSynthesizeEngine,
+      speechSynthesis: typeof speechSynthesis !== 'undefined',
+      speechSynthesisUtterance: typeof SpeechSynthesisUtterance !== 'undefined',
+      innerAudioContext: !!wx.createInnerAudioContext,
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown'
+    };
+
+    // 判断运行环境
+    if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+      info.environment = 'browser'; // 开发者工具或浏览器
+    } else {
+      info.environment = 'miniprogram'; // 真机小程序环境
+    }
+
+    console.log('📱 TTS详细支持信息:', info);
+    return info;
   }
 
   /**
