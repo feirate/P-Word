@@ -1,0 +1,45 @@
+{
+  "mcpServers": {
+    "p-word-debugger": {
+      "command": "python3",
+      "args": [
+        "/Users/gongshenshen/KnowledgeBase/20_学习中/P-Word/lightweight-debug-tool.py",
+        "json"
+      ],
+      "env": {
+        "PYTHONPATH": "/Users/gongshenshen/KnowledgeBase/20_学习中/P-Word"
+      }
+    }
+  },
+  "mcpTools": {
+    "p-word-debugger": [
+      {
+        "name": "check_status",
+        "description": "检查微信开发者工具和P-Word项目状态",
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "required": []
+        }
+      },
+      {
+        "name": "analyze_project", 
+        "description": "分析P-Word项目代码结构和统计信息",
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "required": []
+        }
+      },
+      {
+        "name": "get_suggestions",
+        "description": "获取P-Word项目调试和开发建议",
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "required": []
+        }
+      }
+    ]
+  }
+} 

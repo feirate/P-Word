@@ -1,0 +1,20 @@
+{
+  "mcpServers": {
+    "wechat-devtools-debug": {
+      "command": "python3",
+      "args": [
+        "/Users/gongshenshen/KnowledgeBase/20_学习中/P-Word/wechat-devtools-mcp.py"
+      ],
+      "env": {
+        "PYTHONPATH": "/Users/gongshenshen/KnowledgeBase/20_学习中/P-Word"
+      }
+    },
+    "p-word-debug-assistant": {
+      "command": "python3",
+      "args": [
+        "-c",
+        "import sys; sys.path.append('/Users/gongshenshen/KnowledgeBase/20_学习中/P-Word'); exec(open('/Users/gongshenshen/KnowledgeBase/20_学习中/P-Word/debug-assistant.py').read())"
+      ]
+    }
+  }
+} 

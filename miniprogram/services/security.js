@@ -35,7 +35,60 @@ class SecurityService {
   }
 
   /**
-   * 加密敏感数据
+   * Base64编码（微信小程序兼容版）
+   * @param {string} str 待编码字符串
+   * @returns {string} Base64编码后的字符串
+   */
+  base64Encode(str) {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+    let result = ''
+    let i = 0
+    
+    while (i < str.length) {
+      const a = str.charCodeAt(i++)
+      const b = i < str.length ? str.charCodeAt(i++) : 0
+      const c = i < str.length ? str.charCodeAt(i++) : 0
+      
+      const bitmap = (a << 16) | (b << 8) | c
+      result += chars.charAt((bitmap >> 18) & 63)
+      result += chars.charAt((bitmap >> 12) & 63)
+      result += i - 2 < str.length ? chars.charAt((bitmap >> 6) & 63) : '='
+      result += i - 1 < str.length ? chars.charAt(bitmap & 63) : '='
+    }
+    
+    return result
+  }
+
+  /**
+   * Base64解码（微信小程序兼容版）
+   * @param {string} str Base64编码的字符串
+   * @returns {string} 解码后的字符串
+   */
+  base64Decode(str) {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+    let result = ''
+    let i = 0
+    
+    str = str.replace(/[^A-Za-z0-9+/]/g, '')
+    
+    while (i < str.length) {
+      const encoded1 = chars.indexOf(str.charAt(i++))
+      const encoded2 = chars.indexOf(str.charAt(i++))
+      const encoded3 = chars.indexOf(str.charAt(i++))
+      const encoded4 = chars.indexOf(str.charAt(i++))
+      
+      const bitmap = (encoded1 << 18) | (encoded2 << 12) | (encoded3 << 6) | encoded4
+      result += String.fromCharCode((bitmap >> 16) & 255)
+      
+      if (encoded3 !== 64) result += String.fromCharCode((bitmap >> 8) & 255)
+      if (encoded4 !== 64) result += String.fromCharCode(bitmap & 255)
+    }
+    
+    return result
+  }
+
+  /**
+   * 加密敏感数据（修复版）
    * @param {any} data 待加密数据
    * @returns {string} 加密后的字符串
    */
@@ -49,7 +102,7 @@ class SecurityService {
           jsonStr.charCodeAt(i) ^ this.encryptionKey.charCodeAt(i % this.encryptionKey.length)
         )
       }
-      return btoa(encrypted) // Base64编码
+      return this.base64Encode(encrypted) // 使用自定义Base64编码
     } catch (error) {
       console.error('数据加密失败:', error)
       return null
@@ -57,13 +110,13 @@ class SecurityService {
   }
 
   /**
-   * 解密数据
+   * 解密数据（修复版）
    * @param {string} encryptedData 加密的数据
    * @returns {any} 解密后的数据
    */
   decryptData(encryptedData) {
     try {
-      const encrypted = atob(encryptedData) // Base64解码
+      const encrypted = this.base64Decode(encryptedData) // 使用自定义Base64解码
       let decrypted = ''
       for (let i = 0; i < encrypted.length; i++) {
         decrypted += String.fromCharCode(
@@ -101,7 +154,7 @@ class SecurityService {
   }
 
   /**
-   * 安全读取本地数据
+   * 安全读取本地数据（增强版）
    * @param {string} key 存储键
    * @returns {any} 读取的数据
    */
@@ -111,12 +164,25 @@ class SecurityService {
       if (!stored) return null
 
       if (stored.encrypted) {
-        return this.decryptData(stored.data)
+        const decrypted = this.decryptData(stored.data)
+        if (decrypted === null) {
+          // 解密失败，清除损坏的数据
+          console.warn(`⚠️ 数据解密失败，清除损坏数据: ${key}`)
+          wx.removeStorageSync(key)
+          return null
+        }
+        return decrypted
       } else {
         return stored.data
       }
     } catch (error) {
       console.error('安全读取失败:', error)
+      // 清除有问题的数据
+      try {
+        wx.removeStorageSync(key)
+      } catch (e) {
+        // 忽略清除错误
+      }
       return null
     }
   }
@@ -179,6 +245,18 @@ class SecurityService {
     const timestamp = Date.now()
     const random = Math.random().toString(36).substring(2)
     return `pword_${timestamp}_${random}${extension}`
+  }
+
+  /**
+   * 生成安全的唯一ID
+   * @param {string} prefix ID前缀
+   * @returns {string} 唯一ID
+   */
+  generateSecureId(prefix = 'id') {
+    const timestamp = Date.now().toString(36)
+    const random1 = Math.random().toString(36).substring(2, 8)
+    const random2 = Math.random().toString(36).substring(2, 8)
+    return `${prefix}_${timestamp}_${random1}${random2}`
   }
 
   /**

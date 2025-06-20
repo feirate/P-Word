@@ -1,0 +1,16 @@
+/* pages/settings/settings.wxss */
+.container {
+  padding: 40rpx;
+  text-align: center;
+}
+
+.title {
+  font-size: 36rpx;
+  color: #333;
+  margin-bottom: 40rpx;
+}
+
+.description {
+  color: #666;
+  font-size: 28rpx;
+} 

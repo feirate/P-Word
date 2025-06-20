@@ -5,6 +5,8 @@ const security = require('../../services/security.js')
 const audioService = require('../../services/audioService.js')
 // 引入智能语料库服务模块
 const sentenceService = require('../../services/sentenceService.js')
+// 引入云数据同步服务模块
+const cloudService = require('../../services/cloudService.js')
 
 Page({
   data: {
@@ -22,6 +24,14 @@ Page({
     availableCategories: [],
     selectedCategory: '',
     recommendationMode: 'smart', // 'smart', 'sequential', 'random'
+    
+    // 云同步相关
+    syncStatus: {
+      isOnline: true,
+      queueLength: 0,
+      lastSyncTime: 0
+    },
+    showSyncIndicator: false,
     
     // 录音相关
     isRecording: false,
@@ -63,14 +73,22 @@ Page({
     // 检查录音权限
     this.checkRecordAuth()
     
-    // 初始化高质量录音服务
-    this.initAudioService()
+    // 根据权限状态初始化音频服务
+    if (app.globalData.recordAuth) {
+      this.initAudioService()
+      console.log('✅ 已有录音权限，音频服务已初始化')
+    } else {
+      console.log('⚠️ 暂无录音权限，等待用户授权后再初始化音频服务')
+    }
     
     // 初始化Canvas
     this.initCanvas()
     
     // 初始化语料库系统
     this.initSentenceSystem()
+    
+    // 初始化云同步服务
+    this.initCloudSync()
     
     // 加载今日统计（使用安全存储）
     this.loadTodayStats()
@@ -169,14 +187,22 @@ Page({
     })
   },
 
-  // 初始化Canvas
+  // 初始化Canvas（增强版）
   initCanvas() {
     const query = this.createSelectorQuery()
     query.select('#waveCanvas').boundingClientRect((rect) => {
-      if (rect) {
+      if (rect && rect.width > 0 && rect.height > 0) {
         this.setData({
           canvasWidth: rect.width,
           canvasHeight: rect.height
+        })
+        console.log(`✅ Canvas初始化成功: ${rect.width}x${rect.height}`)
+      } else {
+        console.warn('⚠️ Canvas初始化失败，使用默认尺寸')
+        // 使用默认尺寸
+        this.setData({
+          canvasWidth: 300,
+          canvasHeight: 100
         })
       }
     }).exec()
@@ -293,12 +319,120 @@ Page({
     this.drawWaveform()
   },
 
-  // 绘制波形（增强版）
+  // 绘制波形（增强版，修复Canvas 2D兼容性）
   drawWaveform() {
     const { canvasWidth, canvasHeight, waveData } = this.data
     
     if (!canvasWidth || waveData.length === 0) return
     
+    // 优先使用Canvas 2D API，回退到旧版API
+    this.createSelectorQuery()
+      .select('#waveCanvas')
+      .fields({
+        node: true,
+        size: true
+      })
+      .exec((res) => {
+        if (res[0] && res[0].node) {
+          // 使用新的Canvas 2D API
+          this.drawWaveformNew(res[0])
+        } else {
+          // 回退到旧版Canvas API
+          this.drawWaveformLegacy()
+        }
+      })
+  },
+
+  // 新版Canvas 2D绘制
+  drawWaveformNew(canvasInfo) {
+    const { canvasWidth, canvasHeight, waveData } = this.data
+    
+    // 检查canvas节点是否有效
+    if (!canvasInfo || !canvasInfo.node) {
+      console.warn('⚠️ Canvas节点无效，回退到旧版API')
+      this.drawWaveformLegacy()
+      return
+    }
+    
+    const canvas = canvasInfo.node
+    const ctx = canvas.getContext('2d')
+    
+    // 检查context是否有效
+    if (!ctx) {
+      console.warn('⚠️ Canvas context获取失败，回退到旧版API')
+      this.drawWaveformLegacy()
+      return
+    }
+    
+    // 设置画布尺寸
+    const dpr = wx.getSystemInfoSync().pixelRatio
+    canvas.width = canvasWidth * dpr
+    canvas.height = canvasHeight * dpr
+    ctx.scale(dpr, dpr)
+    
+    // 清除画布
+    ctx.clearRect(0, 0, canvasWidth, canvasHeight)
+    
+    // 绘制背景网格
+    ctx.strokeStyle = 'rgba(74, 144, 226, 0.1)'
+    ctx.lineWidth = 1
+    for (let i = 0; i <= 4; i++) {
+      const y = (canvasHeight / 4) * i
+      ctx.beginPath()
+      ctx.moveTo(0, y)
+      ctx.lineTo(canvasWidth, y)
+      ctx.stroke()
+    }
+    
+    // 设置波形样式
+    ctx.strokeStyle = '#4A90E2'
+    ctx.fillStyle = 'rgba(74, 144, 226, 0.3)'
+    ctx.lineWidth = 2
+    ctx.lineCap = 'round'
+    
+    // 绘制波形区域
+    const barWidth = canvasWidth / Math.max(waveData.length, 1)
+    const centerY = canvasHeight / 2
+    
+    if (waveData.length > 0) {
+      // 绘制填充区域
+      ctx.beginPath()
+      ctx.moveTo(0, centerY)
+      
+      waveData.forEach((amplitude, index) => {
+        const x = index * barWidth
+        const height = amplitude * (canvasHeight * 0.7)
+        ctx.lineTo(x, centerY - height / 2)
+      })
+      
+      waveData.slice().reverse().forEach((amplitude, index) => {
+        const x = (waveData.length - 1 - index) * barWidth
+        const height = amplitude * (canvasHeight * 0.7)
+        ctx.lineTo(x, centerY + height / 2)
+      })
+      
+      ctx.closePath()
+      ctx.fill()
+      
+      // 绘制波形线条
+      ctx.beginPath()
+      waveData.forEach((amplitude, index) => {
+        const x = index * barWidth
+        const height = amplitude * (canvasHeight * 0.7)
+        
+        if (index === 0) {
+          ctx.moveTo(x, centerY - height / 2)
+        } else {
+          ctx.lineTo(x, centerY - height / 2)
+        }
+      })
+      ctx.stroke()
+    }
+  },
+
+  // 旧版Canvas API绘制（兼容性回退）
+  drawWaveformLegacy() {
+    const { canvasWidth, canvasHeight, waveData } = this.data
     const ctx = wx.createCanvasContext('waveCanvas', this)
     
     // 清除画布
@@ -408,25 +542,38 @@ Page({
 
   // 获取下一个推荐句子
   getNextSentence() {
-    const { recommendationMode, selectedCategory } = this.data
+    const { recommendationMode, selectedCategory, currentSentence } = this.data
     let nextSentence = null
+    const currentSentenceId = currentSentence ? currentSentence.id : null
 
     switch (recommendationMode) {
       case 'smart':
-        // 智能推荐（考虑用户水平、练习历史等）
-        nextSentence = sentenceService.getRecommendedSentence({
-          excludeCompleted: true,
-          smartRecommend: true
-        })
+        // 智能推荐（考虑用户水平、练习历史等，排除当前句子）
+        let attempts = 0
+        do {
+          nextSentence = sentenceService.getRecommendedSentence({
+            excludeCompleted: attempts === 0, // 第一次尝试排除已完成的
+            smartRecommend: true
+          })
+          attempts++
+        } while (nextSentence && nextSentence.id === currentSentenceId && attempts < 5)
         break
         
       case 'category':
-        // 按分类筛选
+        // 按分类筛选，排除当前句子
         if (selectedCategory) {
           const categorySentences = sentenceService.getSentencesByCategory(selectedCategory)
+            .filter(s => s.id !== currentSentenceId) // 排除当前句子
           if (categorySentences.length > 0) {
             const randomIndex = Math.floor(Math.random() * categorySentences.length)
             nextSentence = categorySentences[randomIndex]
+          }
+        } else {
+          // 没有选择分类时，从所有句子中随机选择（排除当前句子）
+          const allSentences = sentenceService.sentences.filter(s => s.id !== currentSentenceId)
+          if (allSentences.length > 0) {
+            const randomIndex = Math.floor(Math.random() * allSentences.length)
+            nextSentence = allSentences[randomIndex]
           }
         }
         break
@@ -441,14 +588,21 @@ Page({
         break
         
       default:
-        // 随机选择
-        nextSentence = sentenceService.getRecommendedSentence({
-          excludeCompleted: false,
-          smartRecommend: false
-        })
+        // 随机选择（排除当前句子）
+        const randomSentences = sentenceService.sentences.filter(s => s.id !== currentSentenceId)
+        if (randomSentences.length > 0) {
+          const randomIndex = Math.floor(Math.random() * randomSentences.length)
+          nextSentence = randomSentences[randomIndex]
+        }
     }
 
-    return nextSentence || sentenceService.getCurrentSentence()
+    // 如果没有找到合适的句子，fallback到第一个不同的句子
+    if (!nextSentence || nextSentence.id === currentSentenceId) {
+      const fallbackSentences = sentenceService.sentences.filter(s => s.id !== currentSentenceId)
+      nextSentence = fallbackSentences[0] || sentenceService.sentences[0]
+    }
+
+    return nextSentence
   },
 
   // 【安全】保存录音统计（使用加密存储）
@@ -473,7 +627,7 @@ Page({
       ...currentStats,
       sentenceCount: currentStats.sentenceCount + 1,
       totalTime: currentStats.totalTime + recordDuration,
-      bestScore: Math.max(currentStats.bestScore || 0, audioQuality?.quality || 0),
+      bestScore: Math.max(currentStats.bestScore || 0, audioQuality && audioQuality.quality || 0),
       lastPracticeDate: new Date().toISOString(),
       // 【隐私保护】不保存具体录音内容，仅保存统计信息
       version: '1.0',
@@ -484,13 +638,18 @@ Page({
     security.secureStorage('practice_stats', updatedStats)
     
     // 记录到语料库服务的练习历史
-    sentenceService.recordPractice({
+    const practiceRecord = {
       sentenceId: currentSentence.id,
       category: currentSentence.category,
       difficulty: currentSentence.difficulty || 1,
-      quality: audioQuality?.quality || 60,
+      quality: audioQuality && audioQuality.quality || 60,
       duration: recordDuration
-    })
+    }
+    
+    sentenceService.recordPractice(practiceRecord)
+    
+    // 同步练习记录到云端
+    this.syncPracticeToCloud(practiceRecord)
     
     // 更新页面显示
     this.setData({
@@ -531,30 +690,47 @@ Page({
   async requestAuth() {
     try {
       // 【隐私保护】详细说明权限用途
-      await wx.showModal({
+      const modalResult = await wx.showModal({
         title: '录音权限说明',
         content: '我们需要录音权限用于英语口语练习功能。录音文件仅在您的设备本地处理，不会上传到服务器或收集您的个人信息。',
         showCancel: true,
-        confirmText: '同意并开启',
-        cancelText: '暂不开启'
-      }).then((res) => {
-        if (!res.confirm) {
-          throw new Error('用户拒绝权限申请')
-        }
+        confirmText: '同意',
+        cancelText: '取消'
       })
       
-      await app.requestRecordAuth()
-      this.setData({
-        recordAuth: true,
-        showAuthModal: false
-      })
-      wx.showToast({
-        title: '权限获取成功',
-        icon: 'success'
-      })
+      if (!modalResult.confirm) {
+        this.setData({ showAuthModal: false })
+        return
+      }
+      
+      const authResult = await app.requestRecordAuth()
+      if (authResult) {
+        this.setData({
+          recordAuth: true,
+          showAuthModal: false
+        })
+        
+        // 权限获取成功后初始化音频服务
+        this.initAudioService()
+        
+        wx.showToast({
+          title: '权限获取成功',
+          icon: 'success'
+        })
+        
+        console.log('✅ 录音权限授权成功，音频服务已初始化')
+      }
     } catch (error) {
-      console.error('权限申请失败', error)
+      console.error('❌ 权限申请失败:', error)
       this.setData({ showAuthModal: false })
+      
+      // 显示更详细的错误信息
+      wx.showModal({
+        title: '权限获取失败',
+        content: '无法获取录音权限，您可以稍后在设置页面手动开启',
+        showCancel: false,
+        confirmText: '知道了'
+      })
     }
   },
 
@@ -652,6 +828,102 @@ Page({
 
     const categoryName = category || '全部分类'
     console.log(`📂 选择分类: ${categoryName}`)
+  },
+
+  // 初始化云同步服务
+  initCloudSync() {
+    // 获取同步状态
+    const syncStatus = cloudService.getSyncStatus()
+    
+    this.setData({
+      syncStatus
+    })
+    
+    // 启动时自动同步（如果启用）
+    const cloudSettings = cloudService.getCloudSettings()
+    if (cloudSettings.syncOnLaunch && syncStatus.isOnline) {
+      this.performAutoSync()
+    }
+    
+    console.log('☁️ 云同步服务已初始化')
+  },
+
+  // 同步练习记录到云端
+  async syncPracticeToCloud(practiceRecord) {
+    try {
+      await cloudService.syncPracticeRecord(practiceRecord)
+      
+      // 更新同步状态
+      const syncStatus = cloudService.getSyncStatus()
+      this.setData({ syncStatus })
+      
+    } catch (error) {
+      console.error('练习记录云同步失败:', error)
+      // 显示同步失败指示器
+      this.showSyncIndicator('failed')
+    }
+  },
+
+  // 执行自动同步
+  async performAutoSync() {
+    if (!this.data.syncStatus.isOnline) {
+      return
+    }
+
+    try {
+      // 显示同步指示器
+      this.showSyncIndicator('syncing')
+      
+      // 执行同步
+      await cloudService.performFullSync()
+      
+      // 更新同步状态
+      const syncStatus = cloudService.getSyncStatus()
+      this.setData({ syncStatus })
+      
+      // 显示同步成功
+      this.showSyncIndicator('success')
+      
+    } catch (error) {
+      console.error('自动同步失败:', error)
+      this.showSyncIndicator('failed')
+    }
+  },
+
+  // 手动触发同步
+  async manualSync() {
+    const result = await cloudService.manualSync()
+    
+    if (result.success) {
+      // 更新同步状态
+      const syncStatus = cloudService.getSyncStatus()
+      this.setData({ syncStatus })
+      
+      // 重新加载语料库服务数据（如果有云端更新）
+      sentenceService.loadPracticeHistory()
+    }
+  },
+
+  // 显示同步指示器
+  showSyncIndicator(type) {
+    const indicators = {
+      syncing: { icon: '🔄', text: '同步中...' },
+      success: { icon: '✅', text: '同步完成' },
+      failed: { icon: '❌', text: '同步失败' }
+    }
+    
+    const indicator = indicators[type]
+    if (!indicator) return
+    
+    this.setData({
+      showSyncIndicator: true,
+      syncIndicator: indicator
+    })
+    
+    // 3秒后自动隐藏
+    setTimeout(() => {
+      this.setData({ showSyncIndicator: false })
+    }, 3000)
   },
 
   // 页面销毁时清理

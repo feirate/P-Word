@@ -33,6 +33,68 @@
   color: rgba(255, 255, 255, 0.8);
 }
 
+/* 云同步状态 */
+.sync-status {
+  display: flex;
+  align-items: center;
+  padding: 8rpx 12rpx;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 20rpx;
+  backdrop-filter: blur(10rpx);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  margin-right: 12rpx;
+}
+
+.sync-status:active {
+  transform: scale(0.95);
+}
+
+.sync-icon {
+  font-size: 24rpx;
+  margin-right: 4rpx;
+}
+
+.sync-queue {
+  background: #ff4757;
+  color: white;
+  font-size: 18rpx;
+  padding: 2rpx 6rpx;
+  border-radius: 10rpx;
+  min-width: 20rpx;
+  text-align: center;
+  position: absolute;
+  top: -8rpx;
+  right: -8rpx;
+}
+
+/* 同步指示器 */
+.sync-indicator {
+  position: fixed;
+  top: 100rpx;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 12rpx 24rpx;
+  border-radius: 24rpx;
+  display: flex;
+  align-items: center;
+  z-index: 1000;
+  backdrop-filter: blur(10rpx);
+  animation: slideDown 0.3s ease;
+}
+
+.indicator-icon {
+  font-size: 24rpx;
+  margin-right: 8rpx;
+}
+
+.indicator-text {
+  font-size: 24rpx;
+}
+
 .settings-btn {
   width: 48rpx;
   height: 48rpx;

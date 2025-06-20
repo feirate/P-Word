@@ -40,7 +40,7 @@ page {
 }
 
 /* 重置默认样式 */
-* {
+view, text, button, input, textarea, image, scroll-view {
   box-sizing: border-box;
 }
 
