@@ -15,7 +15,7 @@ class SecurityService {
   generateKey() {
     // 使用新的API获取设备信息
     const deviceInfo = (wx.getDeviceInfo && wx.getDeviceInfo()) || {}
-    const appInfo = (wx.getAppBaseInfo && wx.getAppBaseInfo()) || {}
+    const appInfo = wx.getAppBaseInfo?.() || {}
     const deviceId = (deviceInfo.model || 'unknown') + 
                     (deviceInfo.system || appInfo.platform || 'unknown') + 
                     (appInfo.version || '1.0.0')

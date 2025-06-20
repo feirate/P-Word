@@ -1,118 +1,129 @@
 <!--settings.wxml-->
 <view class="container">
   <view class="header">
-    <text class="title">⚙️ 设置</text>
-    <text class="subtitle">个性化您的练习体验</text>
+    <icon name="settings" size="28" color="#2196F3" />
+    <text class="title">设置</text>
   </view>
 
-  <!-- 语音设置区域 -->
-  <view class="settings-section">
-    <view class="section-title">🔊 语音设置</view>
+  <!-- 语音设置 -->
+  <view class="section">
+    <view class="section-title">
+      <icon name="volume-on" size="24" color="#2196F3" />
+      <text>语音设置</text>
+    </view>
     
-    <!-- 自动朗读开关 -->
     <view class="setting-item">
-      <view class="setting-info">
-        <text class="setting-label">自动朗读</text>
-        <text class="setting-desc">切换句子时自动朗读英文</text>
-      </view>
-      <switch 
-        class="setting-switch" 
-        checked="{{autoPlayEnabled}}" 
-        bindchange="onAutoPlayChange"
-        color="#2196F3"
-      />
+      <text class="setting-label">朗读速度</text>
+      <slider class="setting-slider" 
+              value="{{ttsSettings.speed}}" 
+              min="0.5" 
+              max="2.0" 
+              step="0.1" 
+              bindchange="onSpeedChange"
+              show-value />
     </view>
-
-    <!-- 朗读速度 -->
-    <view class="setting-item">
-      <view class="setting-info">
-        <text class="setting-label">朗读速度</text>
-        <text class="setting-desc">调整语音播放速度</text>
-      </view>
-      <view class="speed-selector">
-        <text class="speed-label">{{ttsRate}}x</text>
-      </view>
-    </view>
-
-    <!-- 朗读音量 -->
-    <view class="setting-item">
-      <view class="setting-info">
-        <text class="setting-label">朗读音量</text>
-        <text class="setting-desc">调整语音播放音量</text>
-      </view>
-      <view class="volume-selector">
-        <text class="volume-label">{{Math.round(ttsVolume * 100)}}%</text>
-      </view>
-    </view>
-  </view>
-
-  <!-- 练习设置区域 -->
-  <view class="settings-section">
-    <view class="section-title">🎯 练习设置</view>
     
-    <!-- 每日目标 -->
     <view class="setting-item">
-      <view class="setting-info">
-        <text class="setting-label">每日目标</text>
-        <text class="setting-desc">设置每日练习句数目标</text>
-      </view>
-      <view class="goal-selector">
-        <text class="goal-label">{{dailyGoal}}句</text>
-      </view>
+      <text class="setting-label">朗读音调</text>
+      <slider class="setting-slider" 
+              value="{{ttsSettings.pitch}}" 
+              min="0.5" 
+              max="2.0" 
+              step="0.1" 
+              bindchange="onPitchChange"
+              show-value />
     </view>
-
-    <!-- 推荐模式 -->
+    
     <view class="setting-item">
-      <view class="setting-info">
-        <text class="setting-label">推荐模式</text>
-        <text class="setting-desc">智能推荐练习内容</text>
-      </view>
-      <view class="mode-selector">
-        <text class="mode-label">{{getModeText(recommendationMode)}}</text>
-      </view>
+      <text class="setting-label">音量大小</text>
+      <slider class="setting-slider" 
+              value="{{ttsSettings.volume}}" 
+              min="0" 
+              max="1" 
+              step="0.1" 
+              bindchange="onVolumeChange"
+              show-value />
+    </view>
+    
+    <view class="setting-item">
+      <text class="setting-label">自动朗读</text>
+      <switch checked="{{ttsSettings.autoPlay}}" 
+             bindchange="onAutoPlayChange" />
     </view>
   </view>
 
-  <!-- 数据管理区域 -->
-  <view class="settings-section">
-    <view class="section-title">📊 数据管理</view>
-    
-    <!-- 清除练习记录 -->
-    <view class="setting-item action-item" bindtap="clearPracticeData">
-      <view class="setting-info">
-        <text class="setting-label">清除练习记录</text>
-        <text class="setting-desc">删除所有练习历史数据</text>
-      </view>
-      <text class="action-icon">🗑️</text>
+  <!-- 练习设置 -->
+  <view class="section">
+    <view class="section-title">
+      <icon name="target" size="24" color="#2196F3" />
+      <text>练习设置</text>
     </view>
-
-    <!-- 导出数据 -->
-    <view class="setting-item action-item" bindtap="exportData">
-      <view class="setting-info">
-        <text class="setting-label">导出数据</text>
-        <text class="setting-desc">导出练习数据备份</text>
-      </view>
-      <text class="action-icon">📤</text>
+    
+    <view class="setting-item">
+      <text class="setting-label">每日目标</text>
+      <picker mode="selector" 
+              range="{{goalOptions}}" 
+              value="{{goalIndex}}" 
+              bindchange="onGoalChange">
+        <text class="setting-value">{{dailyGoal}} 句</text>
+      </picker>
+    </view>
+    
+    <view class="setting-item">
+      <text class="setting-label">智能推荐</text>
+      <switch checked="{{practiceSettings.smartRecommend}}" 
+             bindchange="onSmartRecommendChange" />
+    </view>
+    
+    <view class="setting-item">
+      <text class="setting-label">避免重复</text>
+      <switch checked="{{practiceSettings.avoidRepeats}}" 
+             bindchange="onAvoidRepeatsChange" />
     </view>
   </view>
 
-  <!-- 关于区域 -->
-  <view class="settings-section">
-    <view class="section-title">ℹ️ 关于</view>
-    
-    <view class="setting-item">
-      <view class="setting-info">
-        <text class="setting-label">应用版本</text>
-        <text class="setting-desc">P-Word v1.0.0</text>
-      </view>
+  <!-- 数据管理 -->
+  <view class="section">
+    <view class="section-title">
+      <icon name="bar-chart" size="24" color="#2196F3" />
+      <text>数据管理</text>
     </view>
+    
+    <view class="setting-item" bindtap="exportData">
+      <text class="setting-label">导出练习数据</text>
+      <text class="setting-arrow">></text>
+    </view>
+    
+    <view class="setting-item danger" bindtap="clearHistory">
+      <icon name="trash" size="20" color="#F5222D" />
+      <text class="action-text">清除练习历史</text>
+    </view>
+    
+    <view class="setting-item danger" bindtap="resetSettings">
+      <text class="action-text">重置所有设置</text>
+    </view>
+  </view>
 
-    <view class="setting-item action-item" bindtap="showAbout">
-      <view class="setting-info">
-        <text class="setting-label">关于P-Word</text>
-        <text class="setting-desc">了解更多应用信息</text>
-      </view>
-      <text class="action-icon">📋</text>
+  <!-- 关于 -->
+  <view class="section">
+    <view class="section-title">
+      <icon name="info" size="24" color="#2196F3" />
+      <text>关于</text>
+    </view>
+    
+    <view class="setting-item" bindtap="showAbout">
+      <text class="setting-label">版本信息</text>
+      <text class="setting-value">{{version}}</text>
+    </view>
+    
+    <view class="setting-item" bindtap="showPrivacy">
+      <text class="setting-label">隐私政策</text>
+      <text class="setting-arrow">></text>
+    </view>
+    
+    <view class="setting-item" bindtap="contactUs">
+      <text class="setting-label">联系我们</text>
+      <text class="setting-arrow">></text>
     </view>
   </view>
 </view> 

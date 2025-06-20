@@ -1,5 +1,77 @@
 <!--library.wxml-->
 <view class="container">
-  <text>📚 语料库页面</text>
-  <text>（功能开发中...）</text>
+  <view class="header">
+    <icon name="library" size="28" color="#2196F3" />
+    <text>语料库页面</text>
+  </view>
+  
+  <!-- 分类筛选 -->
+  <view class="category-filter">
+    <scroll-view class="category-scroll" scroll-x>
+      <view class="category-item active">
+        <icon name="book" size="20" color="#2196F3" />
+        <text>全部</text>
+      </view>
+      <view class="category-item">
+        <icon name="target" size="20" color="#8C8C8C" />
+        <text>基础</text>
+      </view>
+      <view class="category-item">
+        <icon name="trending-up" size="20" color="#8C8C8C" />
+        <text>进阶</text>
+      </view>
+      <view class="category-item">
+        <icon name="trophy" size="20" color="#8C8C8C" />
+        <text>高级</text>
+      </view>
+    </scroll-view>
+  </view>
+  
+  <!-- 句子列表 -->
+  <view class="sentence-list">
+    <view class="sentence-item" wx:for="{{sentences}}" wx:key="id">
+      <view class="sentence-header">
+        <icon name="book" size="18" color="#2196F3" />
+        <text class="sentence-level">{{item.level}}</text>
+        <text class="sentence-category">{{item.category}}</text>
+      </view>
+      
+      <view class="sentence-content">
+        <text class="sentence-text">{{item.content}}</text>
+        <text class="sentence-translation">{{item.translation}}</text>
+      </view>
+      
+      <view class="sentence-actions">
+        <view class="action-btn" bindtap="playSentence" data-id="{{item.id}}">
+          <icon name="play" size="16" color="#2196F3" />
+          <text>播放</text>
+        </view>
+        <view class="action-btn" bindtap="practiceSentence" data-id="{{item.id}}">
+          <icon name="mic" size="16" color="#4CAF50" />
+          <text>练习</text>
+        </view>
+      </view>
+    </view>
+  </view>
+  
+  <!-- 统计信息 -->
+  <view class="library-stats">
+    <view class="stat-item">
+      <icon name="book" size="24" color="#2196F3" />
+      <text class="stat-number">{{totalSentences}}</text>
+      <text class="stat-label">总句数</text>
+    </view>
+    <view class="stat-item">
+      <icon name="target" size="24" color="#4CAF50" />
+      <text class="stat-number">{{practisedCount}}</text>
+      <text class="stat-label">已练习</text>
+    </view>
+  </view>
+  
+  <!-- 空状态 -->
+  <view class="empty-state" wx:if="{{sentences.length === 0}}">
+    <icon name="library" size="48" color="#8C8C8C" />
+    <text class="empty-text">暂无语料</text>
+    <text class="empty-tip">语料库正在加载中...</text>
+  </view>
 </view> 

@@ -104,16 +104,21 @@
 
   <!-- 语料库功能测试 -->
   <view class="tab-content" wx:if="{{currentTab === 1}}">
-    <view class="section-title">📚 语料库系统测试</view>
+          <view class="section-title">
+        <icon name="library" size="24" color="#2196F3" />
+        <text>语料库系统测试</text>
+      </view>
     
     <!-- 推荐模式测试 -->
     <view class="recommendation-tests">
       <view class="test-buttons">
         <button class="test-btn smart" bindtap="testSmartRecommendation">
-          🧠 智能推荐
+          <icon name="brain" size="20" color="#2196F3" />
+          智能推荐
         </button>
         <button class="test-btn random" bindtap="testRandomRecommendation">
-          🔀 随机推荐
+          <icon name="shuffle" size="20" color="#2196F3" />
+          随机推荐
         </button>
       </view>
       
@@ -169,12 +174,17 @@
 
   <!-- 云同步功能测试 -->
   <view class="tab-content" wx:if="{{currentTab === 2}}">
-    <view class="section-title">☁️ 云同步功能测试</view>
+          <view class="section-title">
+        <icon name="cloud" size="24" color="#2196F3" />
+        <text>云同步功能测试</text>
+      </view>
     
     <!-- 同步状态 -->
     <view class="sync-status">
       <view class="status-card">
-        <view class="status-icon">{{syncStatus.isOnline ? '☁️' : '📱'}}</view>
+        <view class="status-icon">
+          <icon name="{{syncStatus.isOnline ? 'cloud' : 'smartphone'}}" size="24" color="#2196F3" />
+        </view>
         <view class="status-text">{{syncStatus.isOnline ? '在线' : '离线'}}</view>
         <view class="queue-info">队列: {{syncStatus.queueLength}}条</view>
       </view>
@@ -214,7 +224,10 @@
 
   <!-- 数据分析页面 -->
   <view class="tab-content" wx:if="{{currentTab === 3}}">
-    <view class="section-title">📊 数据分析展示</view>
+          <view class="section-title">
+        <icon name="bar-chart" size="24" color="#2196F3" />
+        <text>数据分析展示</text>
+      </view>
     
     <!-- 统计卡片 -->
     <view class="stats-cards">
@@ -277,8 +290,15 @@
   <!-- 调试面板 -->
   <view class="debug-panel {{showDebugPanel ? 'open' : ''}}">
     <view class="debug-header" bindtap="toggleDebugPanel">
-      <text class="debug-title">🔍 调试面板</text>
-      <text class="debug-toggle">{{showDebugPanel ? '🔽' : '🔼'}}</text>
+      <text class="debug-title">
+        <icon name="info" size="20" color="#8C8C8C" />
+        调试面板
+      </text>
+      <icon 
+        name="{{showDebugPanel ? 'chevron-down' : 'chevron-up'}}" 
+        size="16" 
+        color="#8C8C8C"
+      />
     </view>
     
     <view class="debug-content" wx:if="{{showDebugPanel}}">
@@ -312,5 +332,57 @@
     <button class="control-btn clear" bindtap="clearTestData">
       清空数据
     </button>
+  </view>
+</view>
+
+<!-- 图标组件测试页面 -->
+<view class="test-container">
+  <view class="test-title">图标组件测试</view>
+  
+  <!-- 测试各种图标 -->
+  <view class="icon-test-grid">
+    <view class="icon-test-item">
+      <icon name="volume-on" size="48" color="#2196F3" />
+      <text>volume-on</text>
+    </view>
+    
+    <view class="icon-test-item">
+      <icon name="volume-off" size="48" color="#2196F3" />
+      <text>volume-off</text>
+    </view>
+    
+    <view class="icon-test-item">
+      <icon name="mic" size="48" color="#4CAF50" />
+      <text>mic</text>
+    </view>
+    
+    <view class="icon-test-item">
+      <icon name="play" size="48" color="#FF5722" />
+      <text>play</text>
+    </view>
+    
+    <view class="icon-test-item">
+      <icon name="pause" size="48" color="#FF5722" />
+      <text>pause</text>
+    </view>
+    
+    <view class="icon-test-item">
+      <icon name="square" size="48" color="#F44336" />
+      <text>square</text>
+    </view>
+  </view>
+  
+  <!-- 动态颜色测试 -->
+  <view class="dynamic-test">
+    <view class="test-subtitle">动态颜色测试</view>
+    <view class="color-buttons">
+      <button class="color-btn" style="background: #2196F3;" bindtap="changeColor" data-color="#2196F3">蓝色</button>
+      <button class="color-btn" style="background: #4CAF50;" bindtap="changeColor" data-color="#4CAF50">绿色</button>
+      <button class="color-btn" style="background: #FF5722;" bindtap="changeColor" data-color="#FF5722">红色</button>
+    </view>
+    
+    <view class="dynamic-icon">
+      <icon name="mic" size="64" color="{{currentColor}}" />
+    </view>
   </view>
 </view> 

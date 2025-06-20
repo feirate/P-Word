@@ -656,4 +656,88 @@
 
 .control-btn.clear {
   background: linear-gradient(45deg, #e17055, #d63031);
+}
+
+/* 图标测试样式 */
+.test-container {
+  padding: 40rpx;
+  background: white;
+  margin: 20rpx;
+  border-radius: 16rpx;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.1);
+}
+
+.test-title {
+  font-size: 36rpx;
+  font-weight: 600;
+  color: #333;
+  text-align: center;
+  margin-bottom: 32rpx;
+}
+
+.test-subtitle {
+  font-size: 28rpx;
+  font-weight: 500;
+  color: #666;
+  margin-bottom: 24rpx;
+}
+
+.icon-test-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24rpx;
+  justify-content: space-between;
+  margin-bottom: 48rpx;
+}
+
+.icon-test-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24rpx;
+  border: 2rpx solid #f0f0f0;
+  border-radius: 12rpx;
+  width: 200rpx;
+  transition: all 0.3s ease;
+}
+
+.icon-test-item:hover {
+  border-color: #2196F3;
+  background: #f8fcff;
+}
+
+.icon-test-item text {
+  margin-top: 12rpx;
+  font-size: 24rpx;
+  color: #666;
+}
+
+.dynamic-test {
+  border-top: 2rpx solid #f0f0f0;
+  padding-top: 32rpx;
+}
+
+.color-buttons {
+  display: flex;
+  gap: 16rpx;
+  margin-bottom: 32rpx;
+  justify-content: center;
+}
+
+.color-btn {
+  padding: 12rpx 24rpx;
+  border-radius: 24rpx;
+  color: white;
+  font-size: 24rpx;
+  border: none;
+  min-width: 100rpx;
+}
+
+.dynamic-icon {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 120rpx;
+  background: #f8f9fa;
+  border-radius: 12rpx;
 } 

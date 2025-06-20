@@ -1,5 +1,56 @@
 <!--history.wxml-->
 <view class="container">
-  <text>📊 历史记录页面</text>
-  <text>（功能开发中...）</text>
+  <view class="header">
+    <icon name="trending-up" size="28" color="#2196F3" />
+    <text>历史记录页面</text>
+  </view>
+  
+  <!-- 统计概览 -->
+  <view class="stats-overview">
+    <view class="stat-card">
+      <icon name="clock" size="24" color="#2196F3" />
+      <text class="stat-number">{{totalTime}}</text>
+      <text class="stat-label">总练习时长</text>
+    </view>
+    
+    <view class="stat-card">
+      <icon name="mic" size="24" color="#4CAF50" />
+      <text class="stat-number">{{totalSentences}}</text>
+      <text class="stat-label">完成句数</text>
+    </view>
+    
+    <view class="stat-card">
+      <icon name="trophy" size="24" color="#FFD700" />
+      <text class="stat-number">{{averageScore}}</text>
+      <text class="stat-label">平均分数</text>
+    </view>
+  </view>
+  
+  <!-- 历史记录列表 -->
+  <view class="history-list">
+    <view class="history-item" wx:for="{{historyData}}" wx:key="id">
+      <view class="item-header">
+        <icon name="calendar" size="20" color="#8C8C8C" />
+        <text class="date">{{item.date}}</text>
+        <text class="score">{{item.score}}分</text>
+      </view>
+      
+      <view class="item-content">
+        <text class="sentence">{{item.sentence}}</text>
+        <view class="item-stats">
+          <icon name="clock" size="16" color="#8C8C8C" />
+          <text class="duration">{{item.duration}}</text>
+          <icon name="audio-waveform" size="16" color="#8C8C8C" />
+          <text class="quality">质量: {{item.quality}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+  
+  <!-- 空状态 -->
+  <view class="empty-state" wx:if="{{historyData.length === 0}}">
+    <icon name="book" size="48" color="#8C8C8C" />
+    <text class="empty-text">暂无练习记录</text>
+    <text class="empty-tip">开始练习后这里会显示您的历史记录</text>
+  </view>
 </view> 
