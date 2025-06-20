@@ -45,7 +45,7 @@ Page({
     
     // 波形相关
     canvasWidth: 0,
-    canvasHeight: 100, // 多邻国风格更高的波形区域
+    canvasHeight: 60,
     waveData: [],
     
     // 录音质量分析
@@ -124,9 +124,10 @@ Page({
   // 初始化页面数据
   initPageData() {
     const date = new Date()
+    const year = date.getFullYear()
     const month = (date.getMonth() + 1).toString().padStart(2, '0')
     const day = date.getDate().toString().padStart(2, '0')
-    const currentDate = `${month}.${day}`
+    const currentDate = `${year}.${month}.${day}`
     this.setData({ currentDate })
   },
 
@@ -546,62 +547,60 @@ Page({
     // 清除画布
     ctx.clearRect(0, 0, canvasWidth, canvasHeight)
     
-    // 多邻国风格的条状波形绘制
+    // 绘制背景网格
+    ctx.strokeStyle = 'rgba(74, 144, 226, 0.1)'
+    ctx.lineWidth = 1
+    for (let i = 0; i <= 4; i++) {
+      const y = (canvasHeight / 4) * i
+      ctx.beginPath()
+      ctx.moveTo(0, y)
+      ctx.lineTo(canvasWidth, y)
+      ctx.stroke()
+    }
+    
+    // 设置波形样式
+    ctx.strokeStyle = '#4A90E2'
+    ctx.fillStyle = 'rgba(74, 144, 226, 0.3)'
+    ctx.lineWidth = 2
+    ctx.lineCap = 'round'
+    
+    // 绘制波形区域
+    const barWidth = canvasWidth / Math.max(waveData.length, 1)
+    const centerY = canvasHeight / 2
+    
     if (waveData.length > 0) {
-      const barCount = Math.min(40, waveData.length) // 限制条数，避免过密
-      const barWidth = 4 // 固定条宽
-      const barGap = 2 // 条间距
-      const totalWidth = barCount * (barWidth + barGap) - barGap
-      const startX = (canvasWidth - totalWidth) / 2 // 居中显示
-      const centerY = canvasHeight / 2
+      // 绘制填充区域
+      ctx.beginPath()
+      ctx.moveTo(0, centerY)
       
-      // 设置条状波形样式
-      ctx.fillStyle = '#58CC02' // 多邻国绿色
-      ctx.strokeStyle = 'none'
+      waveData.forEach((amplitude, index) => {
+        const x = index * barWidth
+        const height = amplitude * (canvasHeight * 0.7)
+        ctx.lineTo(x, centerY - height / 2)
+      })
       
-      for (let i = 0; i < barCount; i++) {
-        const dataIndex = Math.floor((i / barCount) * waveData.length)
-        const amplitude = waveData[dataIndex] || 0
-        const barHeight = Math.max(4, amplitude * canvasHeight * 0.8) // 最小高度4px
+      waveData.slice().reverse().forEach((amplitude, index) => {
+        const x = (waveData.length - 1 - index) * barWidth
+        const height = amplitude * (canvasHeight * 0.7)
+        ctx.lineTo(x, centerY + height / 2)
+      })
+      
+      ctx.closePath()
+      ctx.fill()
+      
+      // 绘制波形线条
+      ctx.beginPath()
+      waveData.forEach((amplitude, index) => {
+        const x = index * barWidth
+        const height = amplitude * (canvasHeight * 0.7)
         
-        const x = startX + i * (barWidth + barGap)
-        const y = centerY - barHeight / 2
-        
-                 // 绘制圆角矩形条
-         ctx.beginPath()
-         if (ctx.roundRect) {
-           ctx.roundRect(x, y, barWidth, barHeight, barWidth / 2)
-         } else {
-           // 兼容性回退：使用普通矩形
-           ctx.rect(x, y, barWidth, barHeight)
-         }
-         ctx.fill()
-      }
-    } else {
-      // 无数据时显示静态的占位条
-      const barCount = 20
-      const barWidth = 4
-      const barGap = 2
-      const totalWidth = barCount * (barWidth + barGap) - barGap
-      const startX = (canvasWidth - totalWidth) / 2
-      const centerY = canvasHeight / 2
-      
-      ctx.fillStyle = '#E5E7EB' // 灰色占位
-      
-      for (let i = 0; i < barCount; i++) {
-        const barHeight = 8 + Math.random() * 20 // 随机高度占位
-        const x = startX + i * (barWidth + barGap)
-        const y = centerY - barHeight / 2
-        
-        ctx.beginPath()
-        if (ctx.roundRect) {
-          ctx.roundRect(x, y, barWidth, barHeight, barWidth / 2)
+        if (index === 0) {
+          ctx.moveTo(x, centerY - height / 2)
         } else {
-          // 兼容性回退：使用普通矩形
-          ctx.rect(x, y, barWidth, barHeight)
+          ctx.lineTo(x, centerY - height / 2)
         }
-        ctx.fill()
-      }
+      })
+      ctx.stroke()
     }
   },
 
@@ -613,46 +612,60 @@ Page({
     // 清除画布
     ctx.clearRect(0, 0, canvasWidth, canvasHeight)
     
-    // 多邻国风格的条状波形绘制 - 旧版API
+    // 绘制背景网格
+    ctx.setStrokeStyle('rgba(74, 144, 226, 0.1)')
+    ctx.setLineWidth(1)
+    for (let i = 0; i <= 4; i++) {
+      const y = (canvasHeight / 4) * i
+      ctx.beginPath()
+      ctx.moveTo(0, y)
+      ctx.lineTo(canvasWidth, y)
+      ctx.stroke()
+    }
+    
+    // 设置波形样式
+    ctx.setStrokeStyle('#4A90E2')
+    ctx.setFillStyle('rgba(74, 144, 226, 0.3)')
+    ctx.setLineWidth(2)
+    ctx.setLineCap('round')
+    
+    // 绘制波形区域
+    const barWidth = canvasWidth / Math.max(waveData.length, 1)
+    const centerY = canvasHeight / 2
+    
     if (waveData.length > 0) {
-      const barCount = Math.min(40, waveData.length)
-      const barWidth = 4
-      const barGap = 2
-      const totalWidth = barCount * (barWidth + barGap) - barGap
-      const startX = (canvasWidth - totalWidth) / 2
-      const centerY = canvasHeight / 2
+      // 绘制填充区域
+      ctx.beginPath()
+      ctx.moveTo(0, centerY)
       
-      ctx.setFillStyle('#58CC02')
+      waveData.forEach((amplitude, index) => {
+        const x = index * barWidth
+        const height = amplitude * (canvasHeight * 0.7)
+        ctx.lineTo(x, centerY - height / 2)
+      })
       
-      for (let i = 0; i < barCount; i++) {
-        const dataIndex = Math.floor((i / barCount) * waveData.length)
-        const amplitude = waveData[dataIndex] || 0
-        const barHeight = Math.max(4, amplitude * canvasHeight * 0.8)
+      waveData.slice().reverse().forEach((amplitude, index) => {
+        const x = (waveData.length - 1 - index) * barWidth
+        const height = amplitude * (canvasHeight * 0.7)
+        ctx.lineTo(x, centerY + height / 2)
+      })
+      
+      ctx.closePath()
+      ctx.fill()
+      
+      // 绘制波形线条
+      ctx.beginPath()
+      waveData.forEach((amplitude, index) => {
+        const x = index * barWidth
+        const height = amplitude * (canvasHeight * 0.7)
         
-        const x = startX + i * (barWidth + barGap)
-        const y = centerY - barHeight / 2
-        
-        // 绘制圆角矩形条（旧版API使用简单矩形）
-        ctx.fillRect(x, y, barWidth, barHeight)
-      }
-    } else {
-      // 无数据时显示静态的占位条
-      const barCount = 20
-      const barWidth = 4
-      const barGap = 2
-      const totalWidth = barCount * (barWidth + barGap) - barGap
-      const startX = (canvasWidth - totalWidth) / 2
-      const centerY = canvasHeight / 2
-      
-      ctx.setFillStyle('#E5E7EB')
-      
-      for (let i = 0; i < barCount; i++) {
-        const barHeight = 8 + Math.random() * 20
-        const x = startX + i * (barWidth + barGap)
-        const y = centerY - barHeight / 2
-        
-        ctx.fillRect(x, y, barWidth, barHeight)
-      }
+        if (index === 0) {
+          ctx.moveTo(x, centerY - height / 2)
+        } else {
+          ctx.lineTo(x, centerY - height / 2)
+        }
+      })
+      ctx.stroke()
     }
     
     ctx.draw()
@@ -1174,7 +1187,7 @@ Page({
             const ctx = canvas.getContext('2d');
             
             if (ctx) {
-              const dpr = (wx.getDeviceInfo && wx.getDeviceInfo().pixelRatio) || (wx.getAppBaseInfo && wx.getAppBaseInfo().pixelRatio) || 2;
+              const dpr = (wx.getDeviceInfo && wx.getDeviceInfo().pixelRatio) || wx.getAppBaseInfo?.()?.pixelRatio || 2;
               canvas.width = res[0].width * dpr;
               canvas.height = res[0].height * dpr;
               ctx.scale(dpr, dpr);
@@ -1331,38 +1344,5 @@ Page({
       title: '分享功能开发中',
       icon: 'none'
     });
-  },
-
-  // 多邻国风格录音区域点击处理
-  toggleRecordArea: function() {
-    console.log('🎤 录音区域被点击', {
-      isRecording: this.data.isRecording,
-      hasRecording: this.data.hasRecording,
-      recordAuth: this.data.recordAuth
-    });
-
-    // 如果正在录音，停止录音
-    if (this.data.isRecording) {
-      this.stopRecording();
-      return;
-    }
-
-    // 如果没有录音权限，请求权限
-    if (!this.data.recordAuth) {
-      console.log('❌ 没有录音权限，显示授权弹窗');
-      this.showAuthModal();
-      return;
-    }
-
-    // 如果已有录音，重新开始录音
-    if (this.data.hasRecording) {
-      // 清理之前的录音
-      this.reRecord();
-    }
-
-    // 开始录音
-    setTimeout(() => {
-      this.startRecording();
-    }, 100); // 稍微延迟以确保状态清理完成
   },
 }) 

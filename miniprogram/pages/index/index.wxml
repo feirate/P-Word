@@ -1,29 +1,33 @@
 <!--index.wxml-->
 <view class="container">
-  <!-- 顶部状态栏 - 游戏化改进 -->
+  <!-- 顶部状态栏 - 精简设计 -->
   <view class="status-bar">
     <view class="user-info">
-      <view class="avatar-wrapper">
-        <text class="avatar-icon">🎵</text>
-      </view>
       <view class="date-info">
         <text class="date">{{currentDate}}</text>
-        <text class="streak-info text-secondary">
-          <text class="fire-icon">🔥</text>
+        <text class="streak-info">
+          <icon name="flame" size="20" color="rgba(255, 255, 255, 0.8)" />
           连续 {{practiceStreak || 0}} 天
         </text>
       </view>
     </view>
     
-    <!-- 云同步状态 -->
-    <view class="sync-status" bindtap="manualSync">
-      <text class="sync-icon">{{syncStatus.isOnline ? '☁️' : '📱'}}</text>
-      <text class="sync-queue" wx:if="{{syncStatus.queueLength > 0}}">{{syncStatus.queueLength}}</text>
-    </view>
-    
-    <!-- 设置按钮 -->
-    <view class="settings-btn" bindtap="goToSettings">
-      <text class="icon">⚙️</text>
+    <!-- 右侧功能图标组 -->
+    <view class="top-icons">
+      <view class="icon-item" bindtap="manualSync">
+        <icon name="{{syncStatus.isOnline ? 'cloud' : 'smartphone'}}" size="28" color="rgba(255, 255, 255, 0.9)" />
+        <text class="sync-queue" wx:if="{{syncStatus.queueLength > 0}}">{{syncStatus.queueLength}}</text>
+      </view>
+      <view class="icon-item" bindtap="toggleRecommendationMode">
+        <icon 
+          name="{{recommendationMode === 'smart' ? 'brain' : recommendationMode === 'category' ? 'folder' : 'shuffle'}}" 
+          size="28" 
+          color="rgba(255, 255, 255, 0.9)"
+        />
+      </view>
+      <view class="icon-item" bindtap="goToSettings">
+        <icon name="settings" size="28" color="rgba(255, 255, 255, 0.9)" />
+      </view>
     </view>
   </view>
 
@@ -33,91 +37,60 @@
     <text class="indicator-text">{{syncIndicator.text}}</text>
   </view>
 
-  <!-- 今日目标进度卡片 -->
-  <view class="daily-goal-card card">
-    <view class="goal-header">
-      <view class="goal-info">
-        <text class="goal-icon">⭐</text>
-        <text class="goal-title">今日目标</text>
-      </view>
-      <text class="goal-progress">{{practiceStats.sentenceCount}}/{{dailyGoal || 20}} 句</text>
-    </view>
-    
-    <!-- 环形进度条 -->
-    <view class="progress-ring-container">
-      <canvas 
-        type="2d"
-        canvas-id="progressRing" 
-        id="progressRing"
-        class="progress-ring"
-        style="width: 80px; height: 80px;"
-      ></canvas>
-      <view class="progress-percentage">
-        <text class="percentage-number">{{goalPercentage}}%</text>
-      </view>
-    </view>
-    
-    <!-- 今日成就 -->
-    <view class="today-achievements" wx:if="{{todayAchievements.length > 0}}">
-      <text class="achievement-text">🎉 新成就</text>
-      <scroll-view class="achievement-scroll" scroll-x>
-        <view class="achievement-badge" 
-              wx:for="{{todayAchievements}}" 
-              wx:key="id">
-          <text class="badge-icon">{{item.icon}}</text>
+  <!-- 主要练习区域 - 句子展示与波形 -->
+  <view class="practice-area card">
+    <!-- 句子显示 -->
+    <view class="sentence-section">
+      <view class="sentence-header">
+        <view class="level-badge">
+          <icon name="book" size="20" color="white" />
+          <text class="sentence-level">{{currentSentence.level}}</text>
         </view>
-      </scroll-view>
-    </view>
-  </view>
-
-  <!-- 句子显示区域 - 优化布局 -->
-  <view class="sentence-area card">
-    <view class="sentence-header">
-      <view class="level-badge">
-        <text class="level-icon">📚</text>
-        <text class="sentence-level">{{currentSentence.level}}</text>
+        <text class="sentence-count">{{currentIndex + 1}}/{{totalSentences}}</text>
       </view>
-      <text class="sentence-count">{{currentIndex + 1}}/{{totalSentences}}</text>
       
-      <!-- 推荐模式切换 -->
-      <view class="recommendation-mode" bindtap="toggleRecommendationMode">
-        <text class="mode-icon">
-          {{recommendationMode === 'smart' ? '🧠' : recommendationMode === 'category' ? '📂' : '🔀'}}
-        </text>
-      </view>
-    </view>
-    
-    <view class="sentence-content">
-      <view class="sentence-main">
-        <text class="sentence-text">{{currentSentence.content}}</text>
+      <view class="sentence-content">
+        <view class="sentence-main">
+          <text class="sentence-text">{{currentSentence.content}}</text>
+          
+          <!-- 朗读按钮 -->
+          <view class="tts-button {{isTTSPlaying ? 'playing' : ''}}" bindtap="playTextToSpeech">
+            <icon 
+              name="{{isTTSPlaying ? 'volume-on' : 'volume-off'}}" 
+              size="32" 
+              color="white"
+            />
+          </view>
+        </view>
         
-        <!-- 朗读按钮 -->
-        <view class="tts-button {{isTTSPlaying ? 'playing' : ''}}" bindtap="playTextToSpeech">
-          <icon 
-            name="{{isTTSPlaying ? 'volume-on' : 'volume-off'}}" 
-            size="28" 
-            color="white"
-          />
+        <!-- 句子分类标签 -->
+        <view class="sentence-tags" wx:if="{{currentSentence.category}}">
+          <view class="category-tag">
+            <icon name="library" size="18" color="white" />
+            <text>{{currentSentence.category}}</text>
+          </view>
+          <view class="difficulty-tag" wx:if="{{currentSentence.difficulty}}">
+            <text class="difficulty-stars">{{difficultyStars}}</text>
+          </view>
         </view>
       </view>
       
-      <!-- 句子分类标签 -->
-      <view class="sentence-tags" wx:if="{{currentSentence.category}}">
-        <view class="category-tag">
-          <text class="tag-icon">📂</text>
-          <text>{{currentSentence.category}}</text>
-        </view>
-        <view class="difficulty-tag" wx:if="{{currentSentence.difficulty}}">
-          <text class="difficulty-stars">{{difficultyStars}}</text>
-        </view>
+      <!-- 翻译（可展开） -->
+      <view class="translation" wx:if="{{showTranslation}}">
+        <text class="translation-text text-secondary">{{currentSentence.translation}}</text>
+      </view>
+      
+      <!-- 展开翻译按钮 -->
+      <view class="expand-btn" bindtap="toggleTranslation">
+        <icon 
+          name="{{showTranslation ? 'chevron-up' : 'chevron-down'}}" 
+          size="24" 
+          color="#8C8C8C"
+        />
+        <text class="text-secondary">{{showTranslation ? '收起' : '显示'}}翻译</text>
       </view>
     </view>
-    
-    <!-- 翻译（可展开） -->
-    <view class="translation" wx:if="{{showTranslation}}">
-      <text class="translation-text text-secondary">{{currentSentence.translation}}</text>
-    </view>
-    
+
     <!-- 分类筛选（当模式为category时显示） -->
     <view class="category-filter" wx:if="{{recommendationMode === 'category'}}">
       <scroll-view class="category-scroll" scroll-x>
@@ -134,40 +107,61 @@
         </view>
       </scroll-view>
     </view>
-    
-    <!-- 展开翻译按钮 -->
-    <view class="expand-btn" bindtap="toggleTranslation">
-      <text class="expand-icon">{{showTranslation ? '🔼' : '🔽'}}</text>
-      <text class="text-secondary">{{showTranslation ? '收起' : '显示'}}翻译</text>
-    </view>
-  </view>
 
-  <!-- 波形可视化区域 - 声波主题优化 -->
-  <view class="wave-container">
-    <view class="wave-header">
-      <text class="wave-title">🎵 声波录制</text>
-      <text class="wave-quality" wx:if="{{audioQuality}}">质量: {{audioQuality.quality}}分</text>
+    <!-- 多邻国风格录音区域 -->
+    <view class="duolingo-record-area" bindtap="toggleRecordArea">
+      <!-- 未录音状态 - 显示提示 -->
+      <view class="record-prompt" wx:if="{{!isRecording && !hasRecording}}">
+        <view class="mic-icon-wrapper">
+          <icon name="mic" size="32" color="#58CC02" />
+        </view>
+        <text class="prompt-text">轻点开始录音</text>
+      </view>
+      
+      <!-- 录音中或已录音状态 - 显示波形 -->
+      <view class="wave-display" wx:else>
+        <view class="wave-header">
+          <view class="record-status-indicator">
+            <view class="status-dot {{isRecording ? 'recording' : 'recorded'}}"></view>
+            <text class="status-text">{{isRecording ? '录音中...' : '录音完成'}}</text>
+          </view>
+          <text class="record-duration" wx:if="{{recordDuration > 0}}">{{recordDurationText}}</text>
+        </view>
+        
+        <!-- 波形Canvas -->
+        <view class="wave-canvas-container">
+          <canvas 
+            type="2d"
+            canvas-id="waveCanvas" 
+            id="waveCanvas"
+            class="duolingo-wave-canvas"
+            style="width: {{canvasWidth}}px; height: {{canvasHeight}}px;"
+          ></canvas>
+          
+          <!-- 录音中的波形动画遮罩 -->
+          <view class="wave-pulse-overlay" wx:if="{{isRecording}}">
+            <view class="pulse-bar" wx:for="{{[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]}}" wx:key="*this" 
+                  style="animation-delay: {{index * 0.1}}s"></view>
+          </view>
+        </view>
+        
+        <!-- 录音质量指示器 -->
+        <view class="quality-indicator" wx:if="{{audioQuality}}">
+          <view class="quality-score-mini">{{audioQuality.quality}}分</view>
+        </view>
+      </view>
     </view>
-    
-    <canvas 
-      type="2d"
-      canvas-id="waveCanvas" 
-      id="waveCanvas"
-      class="wave-canvas"
-      style="width: {{canvasWidth}}px; height: {{canvasHeight}}px;"
-    ></canvas>
-    
-    <!-- 录音时长显示 -->
-    <view class="record-time" wx:if="{{isRecording || recordDuration > 0}}">
-      <text class="time-icon">⏱️</text>
-      <text>{{recordDurationText}}</text>
-    </view>
-    
-    <!-- 录音质量显示 -->
+
+    <!-- 音频质量显示（独立区域） -->
     <view class="audio-quality" wx:if="{{audioQuality}}">
       <view class="quality-header" bindtap="toggleQualityTip">
-        <text class="quality-score">🎵 质量评分: {{audioQuality.quality}}分</text>
-        <text class="quality-toggle">{{showQualityTip ? '▲' : '▼'}}</text>
+        <icon name="music" size="20" color="#4CAF50" />
+        <text class="quality-score">质量评分: {{audioQuality.quality}}分</text>
+        <icon 
+          name="{{showQualityTip ? 'chevron-up' : 'chevron-down'}}" 
+          size="16" 
+          color="#8C8C8C"
+        />
       </view>
       
       <!-- 详细质量信息 -->
@@ -197,44 +191,8 @@
         </view>
       </view>
     </view>
-  </view>
 
-  <!-- 录音控制区域 - 现代化设计 -->
-  <view class="record-controls">
-    <!-- 主录音按钮 -->
-    <view class="record-button-container">
-      <button 
-        class="record-btn {{isRecording ? 'recording' : ''}} {{!recordAuth ? 'disabled' : ''}}"
-        bindtouchstart="startRecording"
-        bindtouchend="stopRecording"
-        disabled="{{!recordAuth}}"
-      >
-        <!-- 录音波纹动画背景 -->
-        <view class="record-ripple" wx:if="{{isRecording}}"></view>
-        <view class="record-ripple delay-1" wx:if="{{isRecording}}"></view>
-        <view class="record-ripple delay-2" wx:if="{{isRecording}}"></view>
-        
-        <view class="record-icon">
-          <icon 
-            wx:if="{{!isRecording}}"
-            name="mic" 
-            size="32" 
-            color="white"
-          />
-          <icon 
-            wx:else
-            name="square" 
-            size="32" 
-            color="white"
-          />
-        </view>
-        <text class="record-text">
-          {{isRecording ? '录音中...' : (recordAuth ? '按住说话' : '需要录音权限')}}
-        </text>
-      </button>
-    </view>
-
-    <!-- 操作按钮组 -->
+    <!-- 操作按钮组 - 简化版 -->
     <view class="action-buttons">
       <!-- 播放按钮 -->
       <button 
@@ -243,7 +201,7 @@
         disabled="{{!hasRecording}}"
       >
         <view class="action-icon">
-          <icon name="play" size="20" color="#2196F3" />
+          <icon name="play" size="24" color="#2196F3" />
         </view>
         <text class="action-text">播放</text>
       </button>
@@ -251,7 +209,7 @@
       <!-- 下一句按钮 -->
       <button class="action-btn next-btn" bindtap="switchSentence">
         <view class="action-icon">
-          <icon name="skip-forward" size="20" color="#2196F3" />
+          <icon name="skip-forward" size="24" color="#2196F3" />
         </view>
         <text class="action-text">下一句</text>
       </button>
@@ -263,58 +221,96 @@
         disabled="{{!hasRecording}}"
       >
         <view class="action-icon">
-          <icon name="rotate-ccw" size="20" color="#2196F3" />
+          <icon name="rotate-ccw" size="24" color="#2196F3" />
         </view>
         <text class="action-text">重录</text>
       </button>
     </view>
   </view>
 
-  <!-- 练习统计 - 游戏化展示 -->
-  <view class="practice-stats card">
-    <view class="stats-title">
-      <view class="stats-icon">
-        <icon name="audio-waveform" size="24" color="#2196F3" />
-      </view>
-      <text>今日练习报告</text>
-    </view>
-    
-    <view class="stats-row">
-      <view class="stats-item">
-        <view class="stats-icon">
-          <icon name="mic" size="20" color="#4CAF50" />
+  <!-- 统计与目标合并区域 -->
+  <view class="stats-section card">
+    <!-- 今日目标进度 -->
+    <view class="daily-goal">
+      <view class="goal-header">
+        <view class="goal-info">
+          <icon name="target" size="32" color="#FFD700" />
+          <text class="goal-title">今日目标</text>
         </view>
-        <text class="stats-number">{{practiceStats.sentenceCount}}</text>
-        <text class="stats-label">完成句数</text>
+        <text class="goal-progress">{{practiceStats.sentenceCount}}/{{dailyGoal || 20}} 句</text>
       </view>
-      <view class="stats-divider"></view>
-      <view class="stats-item">
-        <text class="stats-icon">⏱️</text>
-        <text class="stats-number">{{practiceStats.totalTime}}</text>
-        <text class="stats-label">练习时长</text>
+      
+      <!-- 环形进度条 -->
+      <view class="progress-ring-container">
+        <canvas 
+          type="2d"
+          canvas-id="progressRing" 
+          id="progressRing"
+          class="progress-ring"
+          style="width: 80px; height: 80px;"
+        ></canvas>
+        <view class="progress-percentage">
+          <text class="percentage-number">{{goalPercentage}}%</text>
+        </view>
       </view>
-      <view class="stats-divider"></view>
-      <view class="stats-item">
-        <text class="stats-icon">🏆</text>
-        <text class="stats-number">{{practiceStats.bestScore || '--'}}</text>
-        <text class="stats-label">最佳评分</text>
+      
+      <!-- 今日成就 -->
+      <view class="today-achievements" wx:if="{{todayAchievements.length > 0}}">
+        <text class="achievement-text">
+          <icon name="trophy" size="24" color="#FFD700" />
+          新成就
+        </text>
+        <scroll-view class="achievement-scroll" scroll-x>
+          <view class="achievement-badge" 
+                wx:for="{{todayAchievements}}" 
+                wx:key="id">
+            <text class="badge-icon">{{item.icon}}</text>
+          </view>
+        </scroll-view>
       </view>
+    </view>
+
+    <!-- 练习统计 -->
+    <view class="practice-stats">
+      <view class="stats-grid">
+        <view class="stat-item">
+          <icon name="clock" size="32" color="#2196F3" />
+          <text class="stats-number">{{practiceStats.sessionTime}}</text>
+          <text class="stats-label">练习时长</text>
+        </view>
+        
+        <view class="stat-item">
+          <icon name="trophy" size="32" color="#FFD700" />
+          <text class="stats-number">{{practiceStats.bestScore || '--'}}</text>
+          <text class="stats-label">最佳评分</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 快捷操作 - 合并到目标区域 -->
+    <view class="integrated-actions">
+      <button class="action-btn" bindtap="goToHistory">
+        <view class="action-icon">
+          <icon name="trending-up" size="24" color="#2196F3" />
+        </view>
+        <text class="action-text">练习历史</text>
+      </button>
+      
+      <button class="action-btn" bindtap="goToLibrary">
+        <view class="action-icon">
+          <icon name="library" size="24" color="#2196F3" />
+        </view>
+        <text class="action-text">语料库</text>
+      </button>
+      
+      <button class="action-btn" bindtap="shareProgress">
+        <view class="action-icon">
+          <icon name="target" size="24" color="#2196F3" />
+        </view>
+        <text class="action-text">分享练习</text>
+      </button>
     </view>
   </view>
 
-  <!-- 快捷操作区域 -->
-  <view class="quick-actions card">
-    <view class="quick-btn" bindtap="goToHistory">
-      <text class="quick-icon">📈</text>
-      <text class="quick-text">练习历史</text>
-    </view>
-    <view class="quick-btn" bindtap="goToLibrary">
-      <text class="quick-icon">📚</text>
-      <text class="quick-text">语料库</text>
-    </view>
-    <view class="quick-btn" bindtap="sharePractice">
-      <text class="quick-icon">📤</text>
-      <text class="quick-text">分享练习</text>
-    </view>
-  </view>
+
 </view> 

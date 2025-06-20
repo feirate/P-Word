@@ -1,0 +1,11 @@
+{
+  "timestamp": "2025-06-20T17:52:46.235432",
+  "project_path": "/Users/gongshenshen/KnowledgeBase/20_学习中/P-Word",
+  "issues": [
+    "调试端口未开启"
+  ],
+  "fixes": [
+    "在微信开发者工具中启用调试模式"
+  ],
+  "status": "发现1个问题"
+}

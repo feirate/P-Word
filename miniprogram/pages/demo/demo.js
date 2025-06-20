@@ -71,7 +71,8 @@ Page({
     
     // 测试日志
     testLogs: [],
-    showDebugPanel: false
+    showDebugPanel: false,
+    currentColor: '#2196F3'
   },
 
   onLoad() {
@@ -470,5 +471,14 @@ Page({
       clearInterval(this.timer)
     }
     audioService.cleanup()
+  },
+
+  // 改变图标颜色
+  changeColor(e) {
+    const color = e.currentTarget.dataset.color
+    this.setData({
+      currentColor: color
+    })
+    console.log('图标颜色变更为:', color)
   }
 }) 
