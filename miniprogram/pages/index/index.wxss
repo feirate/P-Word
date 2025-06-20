@@ -341,13 +341,7 @@
   transform: scale(0.95);
 }
 
-.tts-icon {
-  font-size: 28rpx;
-  color: white;
-  transition: all 0.3s ease;
-}
-
-.tts-icon.playing {
+.tts-button.playing {
   animation: pulse-tts 1.5s ease-in-out infinite;
 }
 
@@ -358,7 +352,7 @@
   }
   50% { 
     transform: scale(1.1); 
-    opacity: 0.8;
+    opacity: 0.9;
   }
 }
 
@@ -604,7 +598,10 @@
 }
 
 .action-icon {
-  font-size: 28rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4rpx;
 }
 
 .action-text {
@@ -634,7 +631,9 @@
 }
 
 .stats-icon {
-  font-size: 24rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .stats-row {

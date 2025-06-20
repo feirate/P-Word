@@ -92,10 +92,13 @@
         <text class="sentence-text">{{currentSentence.content}}</text>
         
         <!-- 朗读按钮 -->
-        <view class="tts-button" bindtap="playTextToSpeech">
-          <text class="tts-icon {{isTTSPlaying ? 'playing' : ''}}">
-            {{isTTSPlaying ? '🔊' : '🔉'}}
-          </text>
+        <view class="tts-button {{isTTSPlaying ? 'playing' : ''}}" bindtap="playTextToSpeech">
+          <icon 
+            name="{{isTTSPlaying ? 'volume-on' : 'volume-off'}}" 
+            size="28" 
+            color="white"
+            strokeWidth="2.5"
+          />
         </view>
       </view>
       
@@ -213,8 +216,20 @@
         <view class="record-ripple delay-2" wx:if="{{isRecording}}"></view>
         
         <view class="record-icon">
-          <text wx:if="{{!isRecording}}">🎙️</text>
-          <text wx:else class="recording-icon">⏹️</text>
+          <icon 
+            wx:if="{{!isRecording}}"
+            name="mic" 
+            size="32" 
+            color="white"
+            strokeWidth="2.5"
+          />
+          <icon 
+            wx:else
+            name="square" 
+            size="32" 
+            color="white"
+            strokeWidth="2.5"
+          />
         </view>
         <text class="record-text">
           {{isRecording ? '录音中...' : (recordAuth ? '按住说话' : '需要录音权限')}}
@@ -230,13 +245,17 @@
         bindtap="playRecording"
         disabled="{{!hasRecording}}"
       >
-        <text class="action-icon">▶️</text>
+        <view class="action-icon">
+          <icon name="play" size="20" color="#2196F3" strokeWidth="2" />
+        </view>
         <text class="action-text">播放</text>
       </button>
 
       <!-- 下一句按钮 -->
       <button class="action-btn next-btn" bindtap="switchSentence">
-        <text class="action-icon">⏭️</text>
+        <view class="action-icon">
+          <icon name="skip-forward" size="20" color="#2196F3" strokeWidth="2" />
+        </view>
         <text class="action-text">下一句</text>
       </button>
 
@@ -246,7 +265,9 @@
         bindtap="reRecord"
         disabled="{{!hasRecording}}"
       >
-        <text class="action-icon">🔄</text>
+        <view class="action-icon">
+          <icon name="rotate-ccw" size="20" color="#2196F3" strokeWidth="2" />
+        </view>
         <text class="action-text">重录</text>
       </button>
     </view>
@@ -255,13 +276,17 @@
   <!-- 练习统计 - 游戏化展示 -->
   <view class="practice-stats card">
     <view class="stats-title">
-      <text class="stats-icon">📊</text>
+      <view class="stats-icon">
+        <icon name="audio-waveform" size="24" color="#2196F3" strokeWidth="2" />
+      </view>
       <text>今日练习报告</text>
     </view>
     
     <view class="stats-row">
       <view class="stats-item">
-        <text class="stats-icon">💬</text>
+        <view class="stats-icon">
+          <icon name="mic" size="20" color="#4CAF50" strokeWidth="2" />
+        </view>
         <text class="stats-number">{{practiceStats.sentenceCount}}</text>
         <text class="stats-label">完成句数</text>
       </view>
