@@ -97,7 +97,6 @@
             name="{{isTTSPlaying ? 'volume-on' : 'volume-off'}}" 
             size="28" 
             color="white"
-            strokeWidth="2.5"
           />
         </view>
       </view>
@@ -221,14 +220,12 @@
             name="mic" 
             size="32" 
             color="white"
-            strokeWidth="2.5"
           />
           <icon 
             wx:else
             name="square" 
             size="32" 
             color="white"
-            strokeWidth="2.5"
           />
         </view>
         <text class="record-text">
@@ -246,7 +243,7 @@
         disabled="{{!hasRecording}}"
       >
         <view class="action-icon">
-          <icon name="play" size="20" color="#2196F3" strokeWidth="2" />
+          <icon name="play" size="20" color="#2196F3" />
         </view>
         <text class="action-text">播放</text>
       </button>
@@ -254,7 +251,7 @@
       <!-- 下一句按钮 -->
       <button class="action-btn next-btn" bindtap="switchSentence">
         <view class="action-icon">
-          <icon name="skip-forward" size="20" color="#2196F3" strokeWidth="2" />
+          <icon name="skip-forward" size="20" color="#2196F3" />
         </view>
         <text class="action-text">下一句</text>
       </button>
@@ -266,7 +263,7 @@
         disabled="{{!hasRecording}}"
       >
         <view class="action-icon">
-          <icon name="rotate-ccw" size="20" color="#2196F3" strokeWidth="2" />
+          <icon name="rotate-ccw" size="20" color="#2196F3" />
         </view>
         <text class="action-text">重录</text>
       </button>
@@ -277,7 +274,7 @@
   <view class="practice-stats card">
     <view class="stats-title">
       <view class="stats-icon">
-        <icon name="audio-waveform" size="24" color="#2196F3" strokeWidth="2" />
+        <icon name="audio-waveform" size="24" color="#2196F3" />
       </view>
       <text>今日练习报告</text>
     </view>
@@ -285,7 +282,7 @@
     <view class="stats-row">
       <view class="stats-item">
         <view class="stats-icon">
-          <icon name="mic" size="20" color="#4CAF50" strokeWidth="2" />
+          <icon name="mic" size="20" color="#4CAF50" />
         </view>
         <text class="stats-number">{{practiceStats.sentenceCount}}</text>
         <text class="stats-label">完成句数</text>
