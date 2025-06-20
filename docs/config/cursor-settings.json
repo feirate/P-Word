@@ -1,0 +1,39 @@
+{
+  "mcpServers": {
+    "p-word-debug": {
+      "command": "python3",
+      "args": [
+        "-c", 
+        "import sys, os; sys.path.append('/Users/gongshenshen/KnowledgeBase/20_学习中/P-Word'); import simple_debug_assistant; import json; debugger = simple_debug_assistant.WeChatDevToolsDebugger(); print(json.dumps({'status': debugger.check_status(), 'analysis': debugger.analyze_project()}))"
+      ],
+      "env": {
+        "PYTHONPATH": "/Users/gongshenshen/KnowledgeBase/20_学习中/P-Word"
+      }
+    }
+  },
+  "mcp.tools": {
+    "p-word-debug": {
+      "check_status": {
+        "description": "检查微信开发者工具状态和调试端口",
+        "parameters": {
+          "type": "object",
+          "properties": {}
+        }
+      },
+      "analyze_project": {
+        "description": "分析P-Word项目结构和代码统计", 
+        "parameters": {
+          "type": "object",
+          "properties": {}
+        }
+      },
+      "quick_diagnosis": {
+        "description": "一键诊断项目状态和开发者工具",
+        "parameters": {
+          "type": "object", 
+          "properties": {}
+        }
+      }
+    }
+  }
+} 

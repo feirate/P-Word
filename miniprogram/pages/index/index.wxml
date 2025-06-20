@@ -7,10 +7,22 @@
       <text class="practice-time text-secondary">今日练习 {{todayPracticeTime}} 分钟</text>
     </view>
     
+    <!-- 云同步状态 -->
+    <view class="sync-status" bindtap="manualSync">
+      <text class="sync-icon">{{syncStatus.isOnline ? '☁️' : '📱'}}</text>
+      <text class="sync-queue" wx:if="{{syncStatus.queueLength > 0}}">{{syncStatus.queueLength}}</text>
+    </view>
+    
     <!-- 设置按钮 -->
     <view class="settings-btn" bindtap="goToSettings">
       <text class="icon">⚙️</text>
     </view>
+  </view>
+
+  <!-- 同步指示器 -->
+  <view class="sync-indicator" wx:if="{{showSyncIndicator}}">
+    <text class="indicator-icon">{{syncIndicator.icon}}</text>
+    <text class="indicator-text">{{syncIndicator.text}}</text>
   </view>
 
   <!-- 句子显示区域 -->
@@ -70,6 +82,7 @@
   <!-- 波形可视化区域 -->
   <view class="wave-container">
     <canvas 
+      type="2d"
       canvas-id="waveCanvas" 
       id="waveCanvas"
       class="wave-canvas"
