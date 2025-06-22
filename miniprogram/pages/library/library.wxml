@@ -1,77 +1,215 @@
 <!--library.wxml-->
 <view class="container">
-  <view class="header">
-    <icon name="library" size="28" color="#2196F3" />
-    <text>语料库页面</text>
+  <!-- 加载状态 -->
+  <view class="loading-container" wx:if="{{isLoading}}">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">加载中...</text>
   </view>
-  
-  <!-- 分类筛选 -->
-  <view class="category-filter">
-    <scroll-view class="category-scroll" scroll-x>
-      <view class="category-item active">
+
+  <!-- 主要内容 -->
+  <view class="main-content" wx:else>
+    <!-- 页面标题 -->
+    <view class="header">
+      <icon name="library" size="28" color="#2196F3" />
+      <text class="header-title">语料库</text>
+      <view class="header-stats">
+        <text class="stats-text">{{statistics.totalSentences}}句</text>
+      </view>
+    </view>
+    
+    <!-- 测试按钮 -->
+    <button class="test-btn" bindtap="testButtonClick" style="margin: 20rpx 0; background: #ff4444; color: white;">
+      测试按钮点击
+    </button>
+    
+    <!-- 统计概览 -->
+    <view class="stats-overview">
+      <view class="stat-card">
         <icon name="book" size="20" color="#2196F3" />
-        <text>全部</text>
-      </view>
-      <view class="category-item">
-        <icon name="target" size="20" color="#8C8C8C" />
-        <text>基础</text>
-      </view>
-      <view class="category-item">
-        <icon name="trending-up" size="20" color="#8C8C8C" />
-        <text>进阶</text>
-      </view>
-      <view class="category-item">
-        <icon name="trophy" size="20" color="#8C8C8C" />
-        <text>高级</text>
-      </view>
-    </scroll-view>
-  </view>
-  
-  <!-- 句子列表 -->
-  <view class="sentence-list">
-    <view class="sentence-item" wx:for="{{sentences}}" wx:key="id">
-      <view class="sentence-header">
-        <icon name="book" size="18" color="#2196F3" />
-        <text class="sentence-level">{{item.level}}</text>
-        <text class="sentence-category">{{item.category}}</text>
-      </view>
-      
-      <view class="sentence-content">
-        <text class="sentence-text">{{item.content}}</text>
-        <text class="sentence-translation">{{item.translation}}</text>
-      </view>
-      
-      <view class="sentence-actions">
-        <view class="action-btn" bindtap="playSentence" data-id="{{item.id}}">
-          <icon name="play" size="16" color="#2196F3" />
-          <text>播放</text>
+        <view class="stat-content">
+          <text class="stat-number">{{statistics.totalSentences}}</text>
+          <text class="stat-label">总句数</text>
         </view>
-        <view class="action-btn" bindtap="practiceSentence" data-id="{{item.id}}">
-          <icon name="mic" size="16" color="#4CAF50" />
-          <text>练习</text>
+      </view>
+      
+      <view class="stat-card">
+        <icon name="check-circle" size="20" color="#4CAF50" />
+        <view class="stat-content">
+          <text class="stat-number">{{statistics.practicedSentences}}</text>
+          <text class="stat-label">已练习</text>
+        </view>
+      </view>
+      
+      <view class="stat-card">
+        <icon name="target" size="20" color="#FF9800" />
+        <view class="stat-content">
+          <text class="stat-number">{{statistics.completionRate}}%</text>
+          <text class="stat-label">完成率</text>
+        </view>
+      </view>
+      
+      <view class="stat-card">
+        <icon name="star" size="20" color="#FFD700" />
+        <view class="stat-content">
+          <text class="stat-number">{{statistics.averageQuality}}</text>
+          <text class="stat-label">平均分</text>
         </view>
       </view>
     </view>
-  </view>
-  
-  <!-- 统计信息 -->
-  <view class="library-stats">
-    <view class="stat-item">
-      <icon name="book" size="24" color="#2196F3" />
-      <text class="stat-number">{{totalSentences}}</text>
-      <text class="stat-label">总句数</text>
+
+    <!-- 搜索栏 -->
+    <view class="search-section">
+      <view class="search-box">
+        <icon name="search" size="18" color="#8C8C8C" />
+        <input 
+          class="search-input" 
+          placeholder="搜索句子内容或分类..."
+          value="{{searchKeyword}}"
+          bindinput="onSearchInput"
+        />
+        <view class="search-clear" wx:if="{{searchKeyword}}" bindtap="clearFilters">
+          <icon name="x" size="16" color="#8C8C8C" />
+        </view>
+      </view>
     </view>
-    <view class="stat-item">
-      <icon name="target" size="24" color="#4CAF50" />
-      <text class="stat-number">{{practisedCount}}</text>
-      <text class="stat-label">已练习</text>
+
+    <!-- 筛选和排序 -->
+    <view class="filter-section">
+      <!-- 分类筛选 -->
+      <scroll-view class="category-scroll" scroll-x>
+        <view class="category-filters">
+          <view 
+            class="category-item {{selectedCategory === '' ? 'active' : ''}}"
+            bindtap="onCategoryChange"
+            data-category=""
+          >
+            <text>全部</text>
+          </view>
+          <view 
+            wx:for="{{availableCategories}}" 
+            wx:key="*this"
+            class="category-item {{selectedCategory === item ? 'active' : ''}}"
+            bindtap="onCategoryChange"
+            data-category="{{item}}"
+          >
+            <text>{{item}}</text>
+          </view>
+        </view>
+      </scroll-view>
+
+      <!-- 难度和排序 -->
+      <view class="filter-controls">
+        <view class="difficulty-filter">
+          <view 
+            class="difficulty-item {{selectedDifficulty === 0 ? 'active' : ''}}"
+            bindtap="onDifficultyChange"
+            data-difficulty="0"
+          >
+            <text>全部</text>
+          </view>
+          <view 
+            class="difficulty-item {{selectedDifficulty === 1 ? 'active' : ''}}"
+            bindtap="onDifficultyChange"
+            data-difficulty="1"
+          >
+            <text>★</text>
+          </view>
+          <view 
+            class="difficulty-item {{selectedDifficulty === 2 ? 'active' : ''}}"
+            bindtap="onDifficultyChange"
+            data-difficulty="2"
+          >
+            <text>★★</text>
+          </view>
+          <view 
+            class="difficulty-item {{selectedDifficulty === 3 ? 'active' : ''}}"
+            bindtap="onDifficultyChange"
+            data-difficulty="3"
+          >
+            <text>★★★</text>
+          </view>
+        </view>
+
+        <view class="sort-control" bindtap="toggleSortMode">
+          <icon name="sort" size="16" color="#2196F3" />
+          <text class="sort-text">排序</text>
+        </view>
+      </view>
     </view>
-  </view>
-  
-  <!-- 空状态 -->
-  <view class="empty-state" wx:if="{{sentences.length === 0}}">
-    <icon name="library" size="48" color="#8C8C8C" />
-    <text class="empty-text">暂无语料</text>
-    <text class="empty-tip">语料库正在加载中...</text>
+    
+    <!-- 句子列表 -->
+    <view class="sentence-list">
+      <view 
+        wx:for="{{filteredSentences}}" 
+        wx:key="id"
+        class="sentence-item {{item.isPracticed ? 'practiced' : ''}}"
+        bindlongpress="viewSentenceDetail"
+        data-id="{{item.id}}"
+      >
+        <!-- 句子头部 -->
+        <view class="sentence-header">
+          <view class="sentence-meta">
+            <text class="sentence-category">{{item.category}}</text>
+            <view class="difficulty-stars">
+              <text class="stars">{{item.difficultyStars}}</text>
+            </view>
+          </view>
+          
+          <view class="sentence-status">
+            <view class="practice-badge" wx:if="{{item.isPracticed}}">
+              <icon name="check" size="12" color="#4CAF50" />
+              <text class="badge-text">{{item.practiceCount}}</text>
+            </view>
+            <view class="quality-score" wx:if="{{item.bestQuality > 0}}">
+              <text class="score-text">{{item.bestQuality}}</text>
+            </view>
+          </view>
+        </view>
+        
+        <!-- 句子内容 -->
+        <view class="sentence-content">
+          <text class="sentence-text">{{item.content}}</text>
+          <text class="sentence-translation">{{item.translation}}</text>
+        </view>
+        
+        <!-- 操作按钮 -->
+        <view class="sentence-actions">
+          <view 
+            class="action-btn play-btn {{currentPlayingId === item.id && isPlaying ? 'playing' : ''}}" 
+            bindtap="playSentence" 
+            data-id="{{item.id}}"
+          >
+            <icon 
+              name="{{currentPlayingId === item.id && isPlaying ? 'pause' : 'play'}}" 
+              size="16" 
+              color="#2196F3" 
+            />
+            <text>{{currentPlayingId === item.id && isPlaying ? '停止' : '播放'}}</text>
+          </view>
+          
+          <view 
+            class="action-btn practice-btn" 
+            bindtap="practiceSentence" 
+            data-id="{{item.id}}"
+          >
+            <icon name="mic" size="16" color="#4CAF50" />
+            <text>练习</text>
+          </view>
+        </view>
+      </view>
+    </view>
+    
+    <!-- 空状态 -->
+    <view class="empty-state" wx:if="{{filteredSentences.length === 0 && !isLoading}}">
+      <icon name="search" size="48" color="#CCCCCC" />
+      <text class="empty-text">没有找到匹配的句子</text>
+      <text class="empty-tip">尝试调整筛选条件或搜索关键词</text>
+      <view class="empty-action" bindtap="clearFilters">
+        <text>清除筛选</text>
+      </view>
+    </view>
+
+    <!-- 底部间距 -->
+    <view class="bottom-spacer"></view>
   </view>
 </view> 

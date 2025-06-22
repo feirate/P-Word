@@ -38,8 +38,11 @@
       }
     ]
   },
+  "requiredPrivateInfos": [
+    "getLocation",
+    "chooseLocation"
+  ],
+  "requiredBackgroundModes": ["audio"],
   "sitemapLocation": "sitemap.json",
-  "style": "v2",
-  "componentFramework": "glass-easel",
-  "lazyCodeLoading": "requiredComponents"
+  "style": "v2"
 } 

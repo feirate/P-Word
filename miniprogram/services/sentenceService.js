@@ -939,6 +939,14 @@ class SentenceService {
   getTotalCount() {
     return this.sentences.length
   }
+
+  /**
+   * 获取所有句子
+   * @returns {Array} 所有已加载的句子数组
+   */
+  getAllSentences() {
+    return this.sentences
+  }
 }
 
 // 创建全局语料库服务实例

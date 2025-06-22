@@ -27,6 +27,14 @@ Page({
     selectedCategory: '',
     recommendationMode: 'smart', // 'smart', 'sequential', 'random'
     
+    // 级别和分类选择
+    availableLevels: ['全部', '初级', '中级', '高级'],
+    selectedLevel: '全部',
+    selectedLevelIndex: 0,
+    categoryOptions: ['全部'],
+    selectedCategoryDisplay: '全部',
+    selectedCategoryIndex: 0,
+    
     // 云同步相关
     syncStatus: {
       isOnline: true,
@@ -72,6 +80,9 @@ Page({
     // TTS 相关
     isTTSPlaying: false,         // TTS播放状态
     autoPlayEnabled: true,       // 自动朗读功能
+    
+    // 录音播放状态
+    isPlaying: false,            // 录音播放状态
   },
 
   async onLoad() {
@@ -98,22 +109,40 @@ Page({
     this.initCanvas()
     
     // 初始化语料库系统
-    this.initSentenceSystem()
+    await this.initSentenceSystem()
     
     // 初始化云同步服务
     this.initCloudSync()
     
-    // 加载今日统计（使用安全存储）
+    // 加载今日统计（使用安全存储）- 必须在游戏数据初始化之前
     this.loadTodayStats()
     
-    // 初始化游戏化数据
-    this.initGameData()
-    
-    // 绘制进度环
-    this.drawProgressRing()
+    // 等待统计数据加载完成后初始化游戏化数据
+    setTimeout(() => {
+      this.initGameData()
+    }, 100)
     
     // 加载TTS设置
     this.loadTTSSettings()
+    
+    // 加载每日目标设置
+    this.loadDailyGoalSettings()
+    
+    // 初始化TTS权限（延迟执行，避免阻塞页面）
+    setTimeout(() => {
+      this.initTTSPermissions()
+    }, 1000)
+  },
+
+  // 初始化TTS权限
+  async initTTSPermissions() {
+    try {
+      console.log('🔐 开始初始化TTS权限')
+      await ttsService.requestPermissions()
+      console.log('✅ TTS权限初始化完成')
+    } catch (error) {
+      console.warn('⚠️ TTS权限初始化失败:', error)
+    }
   },
 
   onShow() {
@@ -188,11 +217,21 @@ Page({
           waveData: [],
           audioQuality: null
         })
+        
+        // 确保Canvas已初始化（因为现在Canvas会显示）
+        setTimeout(() => {
+          this.ensureCanvasInitialized()
+        }, 50)
+        
         this.startRecordTimer()
       },
       
       onRecordStop: (result) => {
         console.log('🎤 录音完成:', result)
+        
+        // 停止动画和计时器
+        this.stopWaveformAnimation()
+        this.stopRecordTimer()
         
         // 分析录音质量
         const quality = audioService.analyzeAudioQuality()
@@ -204,8 +243,11 @@ Page({
           audioQuality: quality
         })
         
-        this.stopRecordTimer()
-        this.stopWaveformAnimation() // 停止波形动画
+        // 录音完成后，清理并重绘波形为静态状态
+        setTimeout(() => {
+          this.drawFinalWaveform()
+        }, 100)
+        
         this.saveRecordingStats(result)
         
         // 显示录音质量提示
@@ -221,6 +263,11 @@ Page({
       onRecordError: (error) => {
         console.error('🎤 录音错误:', error)
         this.setData({ isRecording: false })
+        
+        // 清理状态
+        this.stopWaveformAnimation()
+        this.stopRecordTimer()
+        
         wx.showToast({
           title: '录音失败，请重试',
           icon: 'none',
@@ -230,16 +277,17 @@ Page({
       
       onPlayStart: () => {
         console.log('▶️ 开始播放录音')
-        // 可以添加播放状态UI
+        this.setData({ isPlaying: true })
       },
       
       onPlayEnd: () => {
         console.log('⏹️ 播放结束')
-        // 可以添加播放结束UI
+        this.setData({ isPlaying: false })
       },
       
       onPlayError: (error) => {
         console.error('❌ 播放失败:', error)
+        this.setData({ isPlaying: false })
         wx.showToast({
           title: '播放失败',
           icon: 'none'
@@ -248,28 +296,87 @@ Page({
     })
   },
 
-  // 初始化Canvas（增强版）
+  // 初始化Canvas（按需初始化）
   initCanvas() {
-    // 延迟执行，确保DOM已渲染
-    setTimeout(() => {
-      const query = this.createSelectorQuery()
-      query.select('#waveCanvas').boundingClientRect((rect) => {
-        if (rect && rect.width > 0 && rect.height > 0) {
-          this.setData({
-            canvasWidth: rect.width,
-            canvasHeight: rect.height
-          })
-          console.log(`✅ Canvas初始化成功: ${rect.width}x${rect.height}`)
+    // Canvas只在录音状态下才会显示，所以不需要在页面加载时初始化
+    // 改为在开始录音时按需初始化
+    console.log('📝 Canvas将在录音时按需初始化')
+  },
+
+  // 设置Canvas（增强错误处理）
+  setupCanvas() {
+    const query = this.createSelectorQuery()
+    query.select('#waveCanvas').boundingClientRect((rect) => {
+      if (rect && rect.width > 0 && rect.height > 0) {
+        this.setData({
+          canvasWidth: rect.width,
+          canvasHeight: rect.height
+        })
+        console.log(`✅ Canvas初始化成功: ${rect.width}x${rect.height}`)
+        
+        // 重置重试计数器
+        this.canvasInitRetries = 0
+        
+        // 初始化Canvas上下文
+        this.initCanvasContext()
+      } else {
+        console.warn('⚠️ Canvas节点获取失败，使用默认尺寸')
+        
+        // 使用默认尺寸
+        this.setData({
+          canvasWidth: 300,
+          canvasHeight: 100
+        })
+        
+        // 检查重试次数，避免无限重试
+        this.canvasInitRetries = (this.canvasInitRetries || 0) + 1
+        const maxRetries = 2
+        
+        if (this.canvasInitRetries < maxRetries) {
+          console.log(`🔄 Canvas重试 ${this.canvasInitRetries}/${maxRetries}`)
+          // 延迟重试
+          setTimeout(() => {
+            this.setupCanvas()
+          }, 500 * this.canvasInitRetries) // 递增延迟时间
         } else {
-          console.warn('⚠️ Canvas初始化失败，使用默认尺寸')
-          // 使用默认尺寸
+          console.warn(`⚠️ Canvas初始化重试${maxRetries}次后放弃，使用默认配置`)
+          // 使用默认配置，不再重试
           this.setData({
             canvasWidth: 300,
             canvasHeight: 100
           })
+          this.initCanvasContext()
         }
-      }).exec()
-    }, 100) // 延迟100ms
+      }
+    }).exec()
+  },
+
+  // 确保Canvas已初始化（在需要时调用）
+  ensureCanvasInitialized() {
+    if (!this.data.canvasWidth || this.data.canvasWidth === 0) {
+      console.log('🎨 按需初始化Canvas')
+      this.canvasInitRetries = 0
+      // 延迟一点时间确保DOM已渲染
+      setTimeout(() => {
+        this.setupCanvas()
+      }, 100)
+    }
+  },
+
+  // 初始化Canvas上下文
+  initCanvasContext() {
+    const query = this.createSelectorQuery()
+    query.select('#waveCanvas')
+      .fields({ node: true, size: true })
+      .exec((res) => {
+        if (res[0] && res[0].node) {
+          this.canvasNode = res[0].node
+          this.canvasContext = this.canvasNode.getContext('2d')
+          console.log('✅ Canvas上下文初始化成功')
+        } else {
+          console.warn('⚠️ Canvas上下文获取失败，使用兼容模式')
+        }
+      })
   },
 
   // 开始录音
@@ -315,7 +422,7 @@ Page({
     }, 1000)
   },
 
-  // 播放录音
+  // 播放录音（真机优化版）
   async playRecording() {
     if (!this.data.hasRecording) {
       wx.showToast({
@@ -324,75 +431,194 @@ Page({
       })
       return
     }
-    
+
+    // 防止重复播放
+    if (this.data.isPlaying) {
+      console.log('⚠️ 录音正在播放中，跳过重复请求')
+      return
+    }
+
     try {
+      // 设置播放状态
+      this.setData({ isPlaying: true })
+      console.log('▶️ 开始播放录音')
+      
       await audioService.playRecording()
+      
+      console.log('✅ 录音播放完成')
     } catch (error) {
-      console.error('播放失败:', error)
+      console.error('❌ 播放失败:', error)
+      wx.showToast({
+        title: '播放失败，请重试',
+        icon: 'none',
+        duration: 2000
+      })
+    } finally {
+      // 重置播放状态
+      this.setData({ isPlaying: false })
     }
   },
 
   // 重新录音
   reRecord() {
+    console.log('🔄 重新录音，清理所有状态')
+    
+    // 停止所有动画和计时器
+    this.stopWaveformAnimation()
+    this.stopRecordTimer()
+    
     // 清理录音服务状态
     audioService.cleanup()
     
+    // 重置所有相关状态
     this.setData({
       hasRecording: false,
       audioPath: '',
       waveData: [],
-      audioQuality: null
+      audioQuality: null,
+      isRecording: false,
+      isPlaying: false,
+      recordDuration: 0,
+      recordDurationText: '00:00'
     })
+    
+    // 清空Canvas显示
+    setTimeout(() => {
+      this.clearCanvas()
+    }, 50)
   },
 
-  // 切换句子
+  // 清空Canvas显示
+  clearCanvas() {
+    const { canvasWidth, canvasHeight } = this.data
+    
+    if (!canvasWidth || canvasWidth === 0) return
+    
+    this.createSelectorQuery()
+      .select('#waveCanvas')
+      .fields({
+        node: true,
+        size: true
+      })
+      .exec((res) => {
+        if (res[0] && res[0].node) {
+          const canvas = res[0].node
+          const ctx = canvas.getContext('2d')
+          
+          if (ctx) {
+            const dpr = (wx.getDeviceInfo && wx.getDeviceInfo().pixelRatio) || (wx.getAppBaseInfo && wx.getAppBaseInfo().pixelRatio) || 2
+            ctx.clearRect(0, 0, canvasWidth * dpr, canvasHeight * dpr)
+            console.log('✅ Canvas已清空')
+          }
+        } else {
+          // 回退到旧版API清空
+          const ctx = wx.createCanvasContext('waveCanvas', this)
+          ctx.clearRect(0, 0, canvasWidth, canvasHeight)
+          ctx.draw()
+        }
+      })
+  },
+
+  // 切换到下一个句子（增强版）
   switchSentence() {
-    const nextSentence = this.getNextSentence()
+    console.log('⏭️ 切换到下一个句子')
+    
+    const currentSentenceId = this.data.currentSentence ? this.data.currentSentence.id : null
+    
+    // 强制获取新的句子（确保不是当前句子）
+    let nextSentence = null
+    let attempts = 0
+    const maxAttempts = 10
+    
+    do {
+      nextSentence = this.getNextSentence()
+      attempts++
+      console.log(`🔍 尝试获取下一句 ${attempts}/${maxAttempts}:`, nextSentence ? nextSentence.id : 'null')
+    } while (nextSentence && nextSentence.id === currentSentenceId && attempts < maxAttempts)
+    
+    // 如果还是同一个句子，强制从筛选后的句子中随机选择一个不同的
+    if (!nextSentence || nextSentence.id === currentSentenceId) {
+      const filteredSentences = this.getFilteredSentences()
+      const differentSentences = filteredSentences.filter(s => s.id !== currentSentenceId)
+      
+      if (differentSentences.length > 0) {
+        const randomIndex = Math.floor(Math.random() * differentSentences.length)
+        nextSentence = differentSentences[randomIndex]
+        console.log(`🎲 强制随机选择不同句子:`, nextSentence.id)
+      } else if (filteredSentences.length > 0) {
+        // 如果筛选后只有一个句子，就用那个句子
+        nextSentence = filteredSentences[0]
+        console.log(`⚠️ 筛选后只有一个句子:`, nextSentence.id)
+        
+        // 如果只有一个句子且就是当前句子，提示用户
+        if (nextSentence.id === currentSentenceId) {
+          wx.showToast({
+            title: '当前筛选条件下只有这一个句子',
+            icon: 'none',
+            duration: 2000
+          })
+          return
+        }
+      }
+    }
     
     if (nextSentence) {
-      this.setData({
+      // 更新当前句子和相关状态
+      const updateData = {
         currentSentence: nextSentence,
-        showTranslation: false
-      })
+        showTranslation: false,
+        hasRecording: false,
+        audioPath: '',
+        audioQuality: null,
+        isRecording: false,
+        isPlaying: false,
+        recordDuration: 0,
+        recordDurationText: '00:00',
+        waveData: []
+      }
+      
+      // 如果选择的是"全部"级别，显示当前句子的实际级别
+      const selectedLevelOption = this.data.availableLevels[this.data.selectedLevelIndex]
+      if (selectedLevelOption === '全部') {
+        updateData.selectedLevel = nextSentence.level
+      }
+      
+      this.setData(updateData)
       
       // 更新难度星星显示
       this.updateDifficultyStars()
       
-      console.log(`🔄 切换到句子: [${nextSentence.level}] ${nextSentence.content}`)
+      // 清空波形画布
+      setTimeout(() => {
+        this.clearCanvas()
+      }, 50)
       
-      // 自动朗读新句子
-      if (this.data.autoPlayEnabled) {
-        setTimeout(() => {
-          this.playTextToSpeech()
-        }, 500) // 延迟0.5秒让用户适应
-      }
+      // 清理录音服务状态
+      audioService.cleanup()
+      
+      console.log('✅ 句子切换完成:', {
+        id: nextSentence.id,
+        content: nextSentence.content,
+        level: nextSentence.level,
+        category: nextSentence.category
+      })
+    } else {
+      console.warn('⚠️ 没有找到下一个句子')
+      wx.showToast({
+        title: '没有更多句子了',
+        icon: 'none'
+      })
     }
-    
-    // 清除当前录音
-    this.setData({
-      hasRecording: false,
-      audioPath: '',
-      waveData: [],
-      audioQuality: null
-    })
-    
-    // 更新游戏化数据
-    this.updateGoalProgress()
-    this.updateStreak()
-    this.checkTodayAchievements()
   },
 
   // 更新难度星星显示
-  updateDifficultyStars: function() {
+  updateDifficultyStars() {
     const { currentSentence } = this.data
     if (currentSentence && currentSentence.difficulty) {
-      let stars = ''
-      for (let i = 0; i < currentSentence.difficulty; i++) {
-        stars += '★'
-      }
-      this.setData({ difficultyStars: stars })
+      const difficultyStars = '★'.repeat(currentSentence.difficulty)
+      this.setData({ difficultyStars })
     } else {
-      this.setData({ difficultyStars: '' })
+      this.setData({ difficultyStars: '★' })
     }
   },
 
@@ -496,6 +722,33 @@ Page({
     }
   },
 
+  // 显示TTS调试面板（长按TTS按钮触发）
+  showTTSDebugPanel() {
+    console.log('🔧 显示TTS调试面板')
+    ttsService.showDebugPanel()
+  },
+
+  // 模拟TTS播放（用于测试）
+  async mockTTSPlay() {
+    const { currentSentence } = this.data
+    if (!currentSentence || !currentSentence.content) {
+      wx.showToast({
+        title: '没有可朗读的句子',
+        icon: 'none'
+      })
+      return
+    }
+
+    try {
+      this.setData({ isTTSPlaying: true })
+      await ttsService.mockTTSPlayback(currentSentence.content)
+      this.setData({ isTTSPlaying: false })
+    } catch (error) {
+      console.error('模拟TTS播放失败:', error)
+      this.setData({ isTTSPlaying: false })
+    }
+  },
+
   // 切换自动朗读功能
   toggleAutoPlay() {
     const newAutoPlayEnabled = !this.data.autoPlayEnabled
@@ -527,6 +780,32 @@ Page({
     }
   },
 
+  // 加载每日目标设置
+  loadDailyGoalSettings() {
+    try {
+      const dailyGoal = wx.getStorageSync('dailyGoal') || 20
+      this.setData({ dailyGoal })
+      console.log(`🎯 已加载每日目标设置: ${dailyGoal}句`)
+      
+      // 重新计算目标完成百分比
+      this.updateGoalPercentage()
+    } catch (error) {
+      console.warn('⚠️ 加载每日目标设置失败:', error)
+    }
+  },
+
+  // 更新每日目标（供设置页面调用）
+  updateDailyGoal(newGoal) {
+    console.log(`🎯 更新每日目标: ${this.data.dailyGoal} → ${newGoal}`)
+    
+    this.setData({ dailyGoal: newGoal })
+    
+    // 重新计算目标完成百分比
+    this.updateGoalPercentage()
+    
+    console.log(`🎯 每日目标已更新为${newGoal}句`)
+  },
+
   // 开始录音计时
   startRecordTimer() {
     this.recordTimer = setInterval(() => {
@@ -546,10 +825,11 @@ Page({
   stopRecordTimer() {
     if (this.recordTimer) {
       clearInterval(this.recordTimer)
+      this.recordTimer = null
     }
   },
 
-  // 更新波形显示（优化版 - 支持动画）
+  // 更新波形显示
   updateWaveform(waveData) {
     // 直接使用音频服务处理过的高质量波形数据
     this.setData({ waveData })
@@ -561,13 +841,9 @@ Page({
     }
   },
 
-  // 启动波形动画循环（性能优化版 - 智能帧率控制）
+  // 启动波形动画循环
   startWaveformAnimation() {
-    // 根据设备性能动态调整帧率
-    const deviceInfo = wx.getDeviceInfo && wx.getDeviceInfo() || {}
-    const pixelRatio = deviceInfo.pixelRatio || 2
-    const isHighPerformance = pixelRatio <= 2
-    const targetFPS = isHighPerformance ? 30 : 20
+    const targetFPS = 30
     const frameInterval = 1000 / targetFPS
     
     let lastFrameTime = 0
@@ -580,7 +856,7 @@ Page({
           lastFrameTime = currentTime
         }
         
-        // 使用requestAnimationFrame或setTimeout的智能选择
+        // 使用requestAnimationFrame或setTimeout
         if (typeof requestAnimationFrame !== 'undefined') {
           this.waveformAnimationId = requestAnimationFrame(animate)
         } else {
@@ -594,7 +870,7 @@ Page({
     animate()
   },
 
-  // 停止波形动画循环（优化版 - 支持多种动画API）
+  // 停止波形动画循环
   stopWaveformAnimation() {
     if (this.waveformAnimationId) {
       // 智能清理：支持requestAnimationFrame和setTimeout
@@ -607,12 +883,264 @@ Page({
     }
   },
 
+  // 绘制波形
+  drawWaveform() {
+    const { canvasWidth, canvasHeight, waveData } = this.data
+    
+    if (!canvasWidth || waveData.length === 0) return
+    
+    // 优先使用Canvas 2D API，回退到旧版API
+    this.createSelectorQuery()
+      .select('#waveCanvas')
+      .fields({
+        node: true,
+        size: true
+      })
+      .exec((res) => {
+        if (res[0] && res[0].node) {
+          // 使用新的Canvas 2D API
+          this.drawWaveformNew(res[0])
+        } else {
+          // 回退到旧版Canvas API
+          this.drawWaveformLegacy()
+        }
+      })
+  },
+
+  // 绘制录音完成后的最终波形（静态显示）
+  drawFinalWaveform() {
+    const { canvasWidth, canvasHeight, waveData } = this.data
+    
+    console.log('🎨 绘制最终波形', { canvasWidth, waveDataLength: waveData.length })
+    
+    if (!canvasWidth || waveData.length === 0) {
+      console.warn('⚠️ Canvas尺寸或波形数据无效，跳过绘制')
+      return
+    }
+    
+    // 确保Canvas已初始化
+    this.ensureCanvasInitialized()
+    
+    // 使用与实时波形相同的绘制逻辑，但不包含动画
+    this.createSelectorQuery()
+      .select('#waveCanvas')
+      .fields({
+        node: true,
+        size: true
+      })
+      .exec((res) => {
+        if (res[0] && res[0].node) {
+          this.drawStaticWaveform(res[0])
+        } else {
+          this.drawWaveformLegacy()
+        }
+      })
+  },
+
+  // 绘制静态波形（录音完成后使用）
+  drawStaticWaveform(canvasInfo) {
+    const { canvasWidth, canvasHeight, waveData } = this.data
+    
+    if (!canvasInfo || !canvasInfo.node) {
+      console.warn('⚠️ Canvas节点无效')
+      return
+    }
+    
+    const canvas = canvasInfo.node
+    const ctx = canvas.getContext('2d')
+    
+    if (!ctx) {
+      console.warn('⚠️ Canvas context获取失败')
+      return
+    }
+    
+    // 设置画布尺寸
+    const dpr = wx.getDeviceInfo?.()?.pixelRatio || 2
+    canvas.width = canvasWidth * dpr
+    canvas.height = canvasHeight * dpr
+    ctx.scale(dpr, dpr)
+    
+    // 清除画布
+    ctx.clearRect(0, 0, canvasWidth, canvasHeight)
+    
+    // 绘制静态波形条
+    if (waveData.length > 0) {
+      const barCount = Math.min(40, waveData.length)
+      const barWidth = 4
+      const barGap = 2
+      const totalWidth = barCount * (barWidth + barGap) - barGap
+      const startX = (canvasWidth - totalWidth) / 2
+      const centerY = canvasHeight / 2
+      
+      for (let i = 0; i < barCount; i++) {
+        const dataIndex = Math.floor((i / barCount) * waveData.length)
+        const amplitude = waveData[dataIndex] || 0
+        
+        const barHeight = Math.max(4, amplitude * canvasHeight * 0.8)
+        const x = startX + i * (barWidth + barGap)
+        const y = centerY - barHeight / 2
+        
+        // 使用静态颜色
+        ctx.fillStyle = '#58CC02'
+        
+        // 绘制圆角矩形条
+        ctx.beginPath()
+        const radius = barWidth / 2
+        this.safeDrawRoundRect(ctx, x, y, barWidth, barHeight, radius)
+        ctx.fill()
+      }
+      
+      console.log('✅ 静态波形绘制完成')
+    }
+  },
+
+  // 新版Canvas 2D绘制
+  drawWaveformNew(canvasInfo) {
+    const { canvasWidth, canvasHeight, waveData, isRecording } = this.data
+    
+    // 检查canvas节点是否有效
+    if (!canvasInfo || !canvasInfo.node) {
+      console.warn('⚠️ Canvas节点无效，回退到旧版API')
+      this.drawWaveformLegacy()
+      return
+    }
+    
+    const canvas = canvasInfo.node
+    const ctx = canvas.getContext('2d')
+    
+    // 检查context是否有效
+    if (!ctx) {
+      console.warn('⚠️ Canvas context获取失败，回退到旧版API')
+      this.drawWaveformLegacy()
+      return
+    }
+    
+    // 设置画布尺寸
+    const dpr = wx.getDeviceInfo?.()?.pixelRatio || 2
+    canvas.width = canvasWidth * dpr
+    canvas.height = canvasHeight * dpr
+    ctx.scale(dpr, dpr)
+    
+    // 清除画布
+    ctx.clearRect(0, 0, canvasWidth, canvasHeight)
+    
+    // 多邻国风格的条状波形绘制
+    if (waveData.length > 0) {
+      const barCount = Math.min(40, waveData.length)
+      const barWidth = 4
+      const barGap = 2
+      const totalWidth = barCount * (barWidth + barGap) - barGap
+      const startX = (canvasWidth - totalWidth) / 2
+      const centerY = canvasHeight / 2
+      
+      // 录音时的动画时间控制
+      const time = isRecording ? Date.now() / 1000 : 0
+      
+      for (let i = 0; i < barCount; i++) {
+        const dataIndex = Math.floor((i / barCount) * waveData.length)
+        const amplitude = waveData[dataIndex] || 0
+        
+        let barHeight = Math.max(4, amplitude * canvasHeight * 0.8)
+        
+        // 录音时添加脉冲动画效果
+        if (isRecording && amplitude > 0.1) {
+          const pulseOffset = Math.sin(time * 3 + i * 0.2) * 0.2
+          barHeight = Math.max(4, (amplitude + pulseOffset) * canvasHeight * 0.8)
+        }
+        
+        const x = startX + i * (barWidth + barGap)
+        const y = centerY - barHeight / 2
+        
+        // 基于音量级别的动态颜色映射
+        ctx.fillStyle = this.getVolumeBasedColor(amplitude, isRecording)
+        
+        // 绘制圆角矩形条
+        ctx.beginPath()
+        const radius = barWidth / 2
+        this.safeDrawRoundRect(ctx, x, y, barWidth, barHeight, radius)
+        ctx.fill()
+      }
+    } else {
+      // 无数据时显示静态的占位条
+      const barCount = 20
+      const barWidth = 4
+      const barGap = 2
+      const totalWidth = barCount * (barWidth + barGap) - barGap
+      const startX = (canvasWidth - totalWidth) / 2
+      const centerY = canvasHeight / 2
+      
+      ctx.fillStyle = '#E5E7EB'
+      
+      for (let i = 0; i < barCount; i++) {
+        const barHeight = 8 + Math.random() * 12
+        const x = startX + i * (barWidth + barGap)
+        const y = centerY - barHeight / 2
+        
+        ctx.beginPath()
+        const radius = barWidth / 2
+        this.safeDrawRoundRect(ctx, x, y, barWidth, barHeight, radius)
+        ctx.fill()
+      }
+    }
+  },
+
+  // 旧版Canvas API绘制（兼容性回退）
+  drawWaveformLegacy() {
+    const { canvasWidth, canvasHeight, waveData } = this.data
+    const ctx = wx.createCanvasContext('waveCanvas', this)
+    
+    // 清除画布
+    ctx.clearRect(0, 0, canvasWidth, canvasHeight)
+    
+    // 多邻国风格的条状波形绘制
+    if (waveData.length > 0) {
+      const barCount = Math.min(40, waveData.length)
+      const barWidth = 4
+      const barGap = 2
+      const totalWidth = barCount * (barWidth + barGap) - barGap
+      const startX = (canvasWidth - totalWidth) / 2
+      const centerY = canvasHeight / 2
+      
+      ctx.setFillStyle('#58CC02')
+      
+      for (let i = 0; i < barCount; i++) {
+        const dataIndex = Math.floor((i / barCount) * waveData.length)
+        const amplitude = waveData[dataIndex] || 0
+        const barHeight = Math.max(4, amplitude * canvasHeight * 0.8)
+        
+        const x = startX + i * (barWidth + barGap)
+        const y = centerY - barHeight / 2
+        
+        ctx.fillRect(x, y, barWidth, barHeight)
+      }
+    } else {
+      // 无数据时显示静态的占位条
+      const barCount = 20
+      const barWidth = 4
+      const barGap = 2
+      const totalWidth = barCount * (barWidth + barGap) - barGap
+      const startX = (canvasWidth - totalWidth) / 2
+      const centerY = canvasHeight / 2
+      
+      ctx.setFillStyle('#E5E7EB')
+      
+      for (let i = 0; i < barCount; i++) {
+        const barHeight = 8 + Math.random() * 20
+        const x = startX + i * (barWidth + barGap)
+        const y = centerY - barHeight / 2
+        
+        ctx.fillRect(x, y, barWidth, barHeight)
+      }
+    }
+    
+    ctx.draw()
+  },
+
   // 安全绘制圆角矩形的辅助函数
   safeDrawRoundRect(ctx, x, y, width, height, radius) {
     try {
       if (ctx.roundRect && typeof ctx.roundRect === 'function') {
         // 尝试使用新版 roundRect API
-        // 确保 radius 参数格式正确
         const radiusArray = Array.isArray(radius) ? radius : [radius]
         ctx.roundRect(x, y, width, height, radiusArray)
       } else {
@@ -642,174 +1170,7 @@ Page({
     ctx.closePath()
   },
 
-  // 绘制波形（增强版，修复Canvas 2D兼容性）
-  drawWaveform() {
-    const { canvasWidth, canvasHeight, waveData } = this.data
-    
-    if (!canvasWidth || waveData.length === 0) return
-    
-    // 优先使用Canvas 2D API，回退到旧版API
-    this.createSelectorQuery()
-      .select('#waveCanvas')
-      .fields({
-        node: true,
-        size: true
-      })
-      .exec((res) => {
-        if (res[0] && res[0].node) {
-          // 使用新的Canvas 2D API
-          this.drawWaveformNew(res[0])
-        } else {
-          // 回退到旧版Canvas API
-          this.drawWaveformLegacy()
-        }
-      })
-  },
-
-  // 新版Canvas 2D绘制（优化版 - 支持脉冲动画和音量颜色映射）
-  drawWaveformNew(canvasInfo) {
-    const { canvasWidth, canvasHeight, waveData, isRecording } = this.data
-    
-    // 检查canvas节点是否有效
-    if (!canvasInfo || !canvasInfo.node) {
-      console.warn('⚠️ Canvas节点无效，回退到旧版API')
-      this.drawWaveformLegacy()
-      return
-    }
-    
-    const canvas = canvasInfo.node
-    const ctx = canvas.getContext('2d')
-    
-    // 检查context是否有效
-    if (!ctx) {
-      console.warn('⚠️ Canvas context获取失败，回退到旧版API')
-      this.drawWaveformLegacy()
-      return
-    }
-    
-    // 设置画布尺寸
-    const dpr = (wx.getDeviceInfo && wx.getDeviceInfo().pixelRatio) || (wx.getAppBaseInfo && wx.getAppBaseInfo().pixelRatio) || 2
-    canvas.width = canvasWidth * dpr
-    canvas.height = canvasHeight * dpr
-    ctx.scale(dpr, dpr)
-    
-    // 清除画布
-    ctx.clearRect(0, 0, canvasWidth, canvasHeight)
-    
-    // 多邻国风格的条状波形绘制（优化版）
-    if (waveData.length > 0) {
-      const barCount = Math.min(40, waveData.length) // 限制条数，避免过密
-      const barWidth = 4 // 固定条宽
-      const barGap = 2 // 条间距
-      const totalWidth = barCount * (barWidth + barGap) - barGap
-      const startX = (canvasWidth - totalWidth) / 2 // 居中显示
-      const centerY = canvasHeight / 2
-      
-      // 录音时的动画时间控制
-      const time = isRecording ? Date.now() / 1000 : 0
-      
-      for (let i = 0; i < barCount; i++) {
-        const dataIndex = Math.floor((i / barCount) * waveData.length)
-        const amplitude = waveData[dataIndex] || 0
-        
-        let barHeight = Math.max(4, amplitude * canvasHeight * 0.8) // 最小高度4px
-        
-        // 录音时添加脉冲动画效果
-        if (isRecording && amplitude > 0.1) {
-          const pulseOffset = Math.sin(time * 3 + i * 0.2) * 0.2
-          barHeight = Math.max(4, (amplitude + pulseOffset) * canvasHeight * 0.8)
-        }
-        
-        const x = startX + i * (barWidth + barGap)
-        const y = centerY - barHeight / 2
-        
-        // 基于音量级别的动态颜色映射
-        ctx.fillStyle = this.getVolumeBasedColor(amplitude, isRecording)
-        
-        // 绘制圆角矩形条
-        ctx.beginPath()
-        const radius = barWidth / 2
-        this.safeDrawRoundRect(ctx, x, y, barWidth, barHeight, radius)
-        ctx.fill()
-      }
-    } else {
-      // 无数据时显示静态的占位条
-      const barCount = 20
-      const barWidth = 4
-      const barGap = 2
-      const totalWidth = barCount * (barWidth + barGap) - barGap
-      const startX = (canvasWidth - totalWidth) / 2
-      const centerY = canvasHeight / 2
-      
-      ctx.fillStyle = '#E5E7EB' // 灰色占位
-      
-      for (let i = 0; i < barCount; i++) {
-        const barHeight = 8 + Math.random() * 12 // 随机高度占位（减少高度差异）
-        const x = startX + i * (barWidth + barGap)
-        const y = centerY - barHeight / 2
-        
-        ctx.beginPath()
-        const radius = barWidth / 2
-        this.safeDrawRoundRect(ctx, x, y, barWidth, barHeight, radius)
-        ctx.fill()
-      }
-    }
-  },
-
-  // 旧版Canvas API绘制（兼容性回退）
-  drawWaveformLegacy() {
-    const { canvasWidth, canvasHeight, waveData } = this.data
-    const ctx = wx.createCanvasContext('waveCanvas', this)
-    
-    // 清除画布
-    ctx.clearRect(0, 0, canvasWidth, canvasHeight)
-    
-    // 多邻国风格的条状波形绘制 - 旧版API
-    if (waveData.length > 0) {
-      const barCount = Math.min(40, waveData.length)
-      const barWidth = 4
-      const barGap = 2
-      const totalWidth = barCount * (barWidth + barGap) - barGap
-      const startX = (canvasWidth - totalWidth) / 2
-      const centerY = canvasHeight / 2
-      
-      ctx.setFillStyle('#58CC02')
-      
-      for (let i = 0; i < barCount; i++) {
-        const dataIndex = Math.floor((i / barCount) * waveData.length)
-        const amplitude = waveData[dataIndex] || 0
-        const barHeight = Math.max(4, amplitude * canvasHeight * 0.8)
-        
-        const x = startX + i * (barWidth + barGap)
-        const y = centerY - barHeight / 2
-        
-        // 绘制圆角矩形条（旧版API使用简单矩形）
-        ctx.fillRect(x, y, barWidth, barHeight)
-      }
-    } else {
-      // 无数据时显示静态的占位条
-      const barCount = 20
-      const barWidth = 4
-      const barGap = 2
-      const totalWidth = barCount * (barWidth + barGap) - barGap
-      const startX = (canvasWidth - totalWidth) / 2
-      const centerY = canvasHeight / 2
-      
-      ctx.setFillStyle('#E5E7EB')
-      
-      for (let i = 0; i < barCount; i++) {
-        const barHeight = 8 + Math.random() * 20
-        const x = startX + i * (barWidth + barGap)
-        const y = centerY - barHeight / 2
-        
-        ctx.fillRect(x, y, barWidth, barHeight)
-      }
-    }
-    
-    ctx.draw()
-  },
-
-  // 基于音量级别的颜色映射（新增优化功能）
+  // 基于音量级别的颜色映射
   getVolumeBasedColor(amplitude, isRecording = false) {
     const volume = Math.min(1, amplitude)
     
@@ -820,170 +1181,34 @@ Page({
     
     // 录音状态：基于音量级别的动态颜色
     if (volume < 0.15) {
-      // 极低音量 - 浅灰色（提示用户说话声音太小）
-      return '#D1D5DB'
+      return '#D1D5DB' // 极低音量 - 浅灰色
     } else if (volume < 0.3) {
-      // 低音量 - 浅绿色
-      return '#84CC16'
+      return '#84CC16' // 低音量 - 浅绿色
     } else if (volume < 0.6) {
-      // 中等音量 - 多邻国标准绿（最佳录音音量）
-      return '#58CC02'
+      return '#58CC02' // 中等音量 - 多邻国标准绿
     } else if (volume < 0.85) {
-      // 较高音量 - 深绿色
-      return '#16A34A'
+      return '#16A34A' // 较高音量 - 深绿色
     } else {
-      // 过高音量 - 橙色警告（提示音量过大）
-      return '#F59E0B'
+      return '#F59E0B' // 过高音量 - 橙色警告
     }
   },
 
-  // 初始化语料库系统
-  async initSentenceSystem() {
-    try {
-      console.log('🚀 初始化语料库系统...')
-      
-      // 等待语料库加载完成
-      await sentenceService.initService()
-      
-      // 获取可用分类
-      const categories = sentenceService.getAllCategories()
-      
-      // 获取推荐句子
-      const recommendedSentence = sentenceService.getRecommendedSentence()
-      
-      // 更新页面数据
-      this.setData({
-        currentSentence: recommendedSentence,
-        totalSentences: sentenceService.getTotalCount(),
-        availableCategories: categories
-      })
-      
-      // 更新难度星星显示
-      this.updateDifficultyStars()
-      
-      console.log('✅ 语料库系统初始化完成')
-      console.log(`📊 语料库统计: ${sentenceService.getTotalCount()} 句，${categories.length} 个分类`)
-      
-    } catch (error) {
-      console.error('❌ 语料库系统初始化失败:', error)
-      
-      // 使用备用句子
-      this.setData({
-        currentSentence: {
-          id: 'fallback_001',
-          content: 'Hello, how are you?',
-          translation: '你好，你好吗？',
-          level: '初级',
-          category: '问候',
-          difficulty: 1
-        },
-        totalSentences: 1,
-        availableCategories: ['问候']
-      })
-      
-      // 更新难度星星显示
-      this.updateDifficultyStars()
-    }
-  },
-
-  // 获取下一个推荐句子
-  getNextSentence() {
-    const { recommendationMode, selectedCategory, currentSentence } = this.data
-    let nextSentence = null
-    const currentSentenceId = currentSentence ? currentSentence.id : null
-
-    switch (recommendationMode) {
-      case 'smart':
-        // 智能推荐（考虑用户水平、练习历史等，排除当前句子）
-        let attempts = 0
-        do {
-          nextSentence = sentenceService.getRecommendedSentence({
-            excludeCompleted: attempts === 0, // 第一次尝试排除已完成的
-            smartRecommend: true
-          })
-          attempts++
-        } while (nextSentence && nextSentence.id === currentSentenceId && attempts < 5)
-        break
-        
-      case 'category':
-        // 按分类筛选，排除当前句子
-        if (selectedCategory) {
-          const categorySentences = sentenceService.getSentencesByCategory(selectedCategory)
-            .filter(s => s.id !== currentSentenceId) // 排除当前句子
-          if (categorySentences.length > 0) {
-            const randomIndex = Math.floor(Math.random() * categorySentences.length)
-            nextSentence = categorySentences[randomIndex]
-          }
-        } else {
-          // 没有选择分类时，从所有句子中随机选择（排除当前句子）
-          const allSentences = sentenceService.sentences.filter(s => s.id !== currentSentenceId)
-          if (allSentences.length > 0) {
-            const randomIndex = Math.floor(Math.random() * allSentences.length)
-            nextSentence = allSentences[randomIndex]
-          }
-        }
-        break
-        
-      case 'sequential':
-        // 顺序练习
-        const currentIndex = this.data.currentIndex
-        const totalSentences = sentenceService.getTotalCount()
-        const nextIndex = (currentIndex + 1) % totalSentences
-        nextSentence = sentenceService.sentences[nextIndex]
-        this.setData({ currentIndex: nextIndex })
-        break
-        
-      default:
-        // 随机选择（排除当前句子）
-        const randomSentences = sentenceService.sentences.filter(s => s.id !== currentSentenceId)
-        if (randomSentences.length > 0) {
-          const randomIndex = Math.floor(Math.random() * randomSentences.length)
-          nextSentence = randomSentences[randomIndex]
-        }
-    }
-
-    // 如果没有找到合适的句子，fallback到第一个不同的句子
-    if (!nextSentence || nextSentence.id === currentSentenceId) {
-      const fallbackSentences = sentenceService.sentences.filter(s => s.id !== currentSentenceId)
-      nextSentence = fallbackSentences[0] || sentenceService.sentences[0]
-    }
-
-    return nextSentence
-  },
-
-  // 【安全】保存录音统计（使用加密存储）
+  // 保存录音统计
   saveRecordingStats(recordResult) {
     const { recordDuration, currentSentence, audioQuality } = this.data
+    
+    console.log('💾 saveRecordingStats 开始执行:', {
+      recordDuration,
+      currentSentence: currentSentence ? currentSentence.id : 'null',
+      audioQuality: audioQuality ? audioQuality.quality : 'null'
+    })
     
     if (!currentSentence) {
       console.warn('⚠️ 当前句子为空，跳过统计保存')
       return
     }
     
-    // 获取当前统计
-    const currentStats = security.secureGet('practice_stats') || {
-      sentenceCount: 0,
-      totalTime: 0,
-      bestScore: null,
-      lastPracticeDate: null
-    }
-    
-    // 更新统计数据
-    const updatedStats = {
-      ...currentStats,
-      sentenceCount: currentStats.sentenceCount + 1,
-      totalTime: currentStats.totalTime + recordDuration,
-      bestScore: Math.max(currentStats.bestScore || 0, audioQuality && audioQuality.quality || 0),
-      lastPracticeDate: new Date().toISOString(),
-      // 【隐私保护】不保存具体录音内容，仅保存统计信息
-      version: '1.0',
-      timestamp: Date.now()
-    }
-    
-    // 【安全】使用加密存储
-    security.secureStorage('practice_stats', updatedStats)
-    
-    // 记录到语料库服务的练习历史
+    // 记录到语料库服务的练习历史（这会自动按日期分组）
     const practiceRecord = {
       sentenceId: currentSentence.id,
       category: currentSentence.category,
@@ -992,34 +1217,57 @@ Page({
       duration: recordDuration
     }
     
+    console.log('📝 记录练习数据到语料库服务:', practiceRecord)
     sentenceService.recordPractice(practiceRecord)
     
     // 同步练习记录到云端
     this.syncPracticeToCloud(practiceRecord)
     
-    // 更新页面显示
-    this.setData({
-      practiceStats: updatedStats,
-      todayPracticeTime: updatedStats.totalTime
-    })
+    // 重新加载今日统计（这会自动计算今天的练习数量）
+    this.loadTodayStats()
     
-    console.log('📊 练习统计已保存（加密）')
-    console.log('📝 练习历史已记录到语料库服务')
+    // 更新目标完成百分比
+    setTimeout(() => {
+      this.updateGoalPercentage()
+    }, 100)
+    
+    console.log('📊 练习统计已更新')
   },
 
   // 【安全】加载今日统计（使用安全读取）
   loadTodayStats() {
-    const stats = security.secureGet('practice_stats')
+    // 从语料库服务获取今日统计（按日期区分）
+    const todayStats = sentenceService.getStatistics()
     
-    if (stats && security.checkDataIntegrity(stats)) {
-      this.setData({
-        practiceStats: stats,
-        todayPracticeTime: stats.totalTime || 0
-      })
-      console.log('📊 练习统计已加载（解密）')
-    } else {
-      console.log('📊 无有效统计数据')
+    console.log('📊 从语料库服务获取的今日统计:', todayStats)
+    
+    // 设置今日统计数据（基于当天练习记录）
+    const practiceStats = {
+      sentenceCount: todayStats.today.practices || 0,  // 今日练习句数
+      totalTime: 0, // 可以从练习历史中累计
+      bestScore: 0,
+      averageScore: todayStats.today.avgQuality || 0,
+      practiceDate: new Date().toDateString()
     }
+    
+    // 从练习历史中计算今日总时长和最佳分数
+    const today = new Date().toISOString().split('T')[0]
+    const practiceHistory = security.secureGet('practice_history') || []
+    const todayPractices = practiceHistory.filter(h => h.date === today)
+    
+    if (todayPractices.length > 0) {
+      practiceStats.totalTime = todayPractices.reduce((sum, p) => sum + (p.duration || 0), 0)
+      practiceStats.bestScore = Math.max(...todayPractices.map(p => p.quality || 0))
+    }
+    
+    console.log('📊 计算出的今日统计数据:', practiceStats)
+    
+    this.setData({
+      practiceStats: practiceStats,
+      todayPracticeTime: practiceStats.totalTime
+    })
+    
+    console.log('📊 今日统计已更新到页面')
   },
 
   // 显示权限申请弹框
@@ -1155,29 +1403,6 @@ Page({
     console.log(`🔄 推荐模式切换到: ${nextMode}`)
   },
 
-  // 选择分类
-  selectCategory(e) {
-    const category = e.currentTarget.dataset.category || ''
-    
-    this.setData({
-      selectedCategory: category
-    })
-
-    // 根据选择的分类获取新句子
-    if (this.data.recommendationMode === 'category') {
-      const nextSentence = this.getNextSentence()
-      if (nextSentence) {
-        this.setData({
-          currentSentence: nextSentence,
-          showTranslation: false
-        })
-      }
-    }
-
-    const categoryName = category || '全部分类'
-    console.log(`📂 选择分类: ${categoryName}`)
-  },
-
   // 初始化云同步服务
   initCloudSync() {
     try {
@@ -1240,36 +1465,21 @@ Page({
     try {
       console.log('🔄 开始执行自动同步...')
       
-      // 显示同步指示器
-      this.showSyncIndicator('syncing')
-      
-      // 执行同步
+      // 静默同步，不显示加载指示器
       await cloudService.performFullSync()
       
       // 更新同步状态
       const syncStatus = cloudService.getSyncStatus()
       this.setData({ syncStatus })
       
-      // 显示同步成功
-      this.showSyncIndicator('success')
       console.log('✅ 自动同步完成')
       
     } catch (error) {
-      console.warn('⚠️ 自动同步失败:', error.message)
+      // 自动同步失败时静默处理，不影响用户体验
+      console.warn('🔄 自动同步失败（静默处理）:', error.message)
       
-      // 更新同步状态
-      try {
-        const syncStatus = cloudService.getSyncStatus()
-        this.setData({ syncStatus })
-      } catch (statusError) {
-        console.error('获取同步状态失败:', statusError)
-      }
-      
-      // 只在开发环境显示失败指示器，生产环境静默处理
-      const isDevelopment = typeof __DEV__ !== 'undefined' ? __DEV__ : true
-      if (isDevelopment) {
-        this.showSyncIndicator('failed')
-      }
+      // 仅在控制台记录错误，不显示用户提示
+      // 这是正常现象，特别是在开发环境或网络不稳定时
     }
   },
 
@@ -1374,7 +1584,7 @@ Page({
       }
       
       // 计算目标完成百分比
-      this.updateGoalProgress();
+      this.updateGoalPercentage();
       
       // 检查今日成就
       this.checkTodayAchievements();
@@ -1384,101 +1594,24 @@ Page({
     }
   },
 
-  // 更新目标进度
-  updateGoalProgress: function() {
-    const { sentenceCount } = this.data.practiceStats;
+  // 更新目标完成百分比
+  updateGoalPercentage: function() {
+    const { sentenceCount } = this.data.practiceStats || { sentenceCount: 0 };
     const { dailyGoal } = this.data;
     const percentage = Math.min(Math.round((sentenceCount / dailyGoal) * 100), 100);
+    
+    console.log('🎯 updateGoalPercentage 计算:', {
+      practiceStats: this.data.practiceStats,
+      sentenceCount: sentenceCount,
+      dailyGoal: dailyGoal,
+      percentage: percentage
+    });
     
     this.setData({ 
       goalPercentage: percentage 
     });
     
-    // 重新绘制进度环
-    this.drawProgressRing();
-  },
-
-  // 绘制进度环
-  drawProgressRing: function() {
-    // 延迟执行，确保DOM已渲染
-    setTimeout(() => {
-      const query = wx.createSelectorQuery();
-      query.select('#progressRing')
-        .fields({ node: true, size: true })
-        .exec((res) => {
-          if (res[0] && res[0].node) {
-            const canvas = res[0].node;
-            const ctx = canvas.getContext('2d');
-            
-            if (ctx) {
-              const dpr = (wx.getDeviceInfo && wx.getDeviceInfo().pixelRatio) || (wx.getAppBaseInfo && wx.getAppBaseInfo().pixelRatio) || 2;
-              canvas.width = res[0].width * dpr;
-              canvas.height = res[0].height * dpr;
-              ctx.scale(dpr, dpr);
-              
-              this.animateProgressRing(ctx, res[0].width, res[0].height);
-            } else {
-              console.warn('⚠️ 进度环Canvas context获取失败');
-            }
-          } else {
-            console.warn('⚠️ 进度环Canvas节点获取失败');
-          }
-        });
-    }, 200); // 延迟200ms
-  },
-
-  // 进度环动画
-  animateProgressRing: function(ctx, width, height) {
-    const centerX = width / 2;
-    const centerY = height / 2;
-    const radius = Math.min(width, height) / 2 - 6;
-    const { goalPercentage } = this.data;
-    
-    let currentProgress = 0;
-    const targetProgress = goalPercentage;
-    const animationDuration = 1000; // 1秒动画
-    const startTime = Date.now();
-    const frameRate = 16; // 约60fps
-    
-    const animate = () => {
-      const now = Date.now();
-      const elapsed = now - startTime;
-      const progress = Math.min(elapsed / animationDuration, 1);
-      
-      // 清除画布
-      ctx.clearRect(0, 0, width, height);
-      
-      // 绘制背景圆环
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-      ctx.strokeStyle = 'rgba(33, 150, 243, 0.1)';
-      ctx.lineWidth = 8;
-      ctx.stroke();
-      
-      // 绘制进度圆环
-      currentProgress = targetProgress * progress;
-      const angle = (currentProgress / 100) * 2 * Math.PI - Math.PI / 2;
-      
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, radius, -Math.PI / 2, angle);
-      
-      // 创建渐变
-      const gradient = ctx.createLinearGradient(0, 0, width, height);
-      gradient.addColorStop(0, '#2196F3');
-      gradient.addColorStop(1, '#1976D2');
-      
-      ctx.strokeStyle = gradient;
-      ctx.lineWidth = 8;
-      ctx.lineCap = 'round';
-      ctx.stroke();
-      
-      if (progress < 1) {
-        // 使用setTimeout替代requestAnimationFrame
-        setTimeout(animate, frameRate);
-      }
-    };
-    
-    animate();
+    console.log('🎯 目标百分比已更新:', percentage + '%');
   },
 
   // 检查今日成就
@@ -1506,72 +1639,29 @@ Page({
     this.setData({ todayAchievements: achievements });
   },
 
-  // 更新连击数据
-  updateStreak: function() {
-    try {
-      const today = new Date().toDateString();
-      let streakData = wx.getStorageSync('practiceStreak') || {
-        count: 0,
-        lastDate: null
-      };
-      
-      if (streakData.lastDate !== today) {
-        const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toDateString();
-        
-        if (streakData.lastDate === yesterday) {
-          // 连续练习
-          streakData.count += 1;
-        } else {
-          // 重新开始
-          streakData.count = 1;
-        }
-        
-        streakData.lastDate = today;
-        wx.setStorageSync('practiceStreak', streakData);
-        
-        this.setData({ practiceStreak: streakData.count });
-      }
-    } catch (e) {
-      console.error('更新连击数据失败:', e);
-    }
-  },
-
-  // 快捷操作方法
-  goToHistory: function() {
-    wx.navigateTo({
+  // 跳转到历史页面
+  goToHistory() {
+    wx.switchTab({
       url: '/pages/history/history'
-    });
+    })
   },
 
-  goToLibrary: function() {
-    wx.navigateTo({
+  // 跳转到语料库页面
+  goToLibrary() {
+    wx.switchTab({
       url: '/pages/library/library'
-    });
+    })
   },
 
-  goToSettings: function() {
-    wx.navigateTo({
+  // 跳转到设置页面
+  goToSettings() {
+    wx.switchTab({
       url: '/pages/settings/settings'
-    });
-  },
-
-  shareProgress: function() {
-    const { practiceStats, practiceStreak } = this.data;
-    
-    wx.showShareMenu({
-      withShareTicket: true,
-      menus: ['shareAppMessage', 'shareTimeline']
-    });
-    
-    // 可以添加分享逻辑
-    wx.showToast({
-      title: '分享功能开发中',
-      icon: 'none'
-    });
+    })
   },
 
   // 多邻国风格录音区域点击处理
-  toggleRecordArea: function() {
+  toggleRecordArea() {
     console.log('🎤 录音区域被点击', {
       isRecording: this.data.isRecording,
       hasRecording: this.data.hasRecording,
@@ -1601,5 +1691,328 @@ Page({
     setTimeout(() => {
       this.startRecording();
     }, 100); // 稍微延迟以确保状态清理完成
+  },
+
+  // 级别选择事件
+  onLevelChange(e) {
+    const selectedLevelIndex = parseInt(e.detail.value)
+    const selectedLevelOption = this.data.availableLevels[selectedLevelIndex]
+    
+    console.log(`🔄 级别切换开始: ${selectedLevelOption}`)
+    
+    // 更新级别选择状态
+    this.setData({
+      selectedLevelIndex
+    })
+    
+    // 如果选择"全部"，清空分类筛选
+    if (selectedLevelOption === '全部') {
+      this.setData({
+        selectedCategory: '',
+        selectedCategoryIndex: 0,
+        selectedCategoryDisplay: '全部'
+      })
+    }
+    
+    // 强制获取新的句子（确保不是当前句子）
+    let nextSentence = null
+    let attempts = 0
+    const maxAttempts = 10
+    const currentSentenceId = this.data.currentSentence ? this.data.currentSentence.id : null
+    
+    do {
+      nextSentence = this.getNextSentence()
+      attempts++
+      console.log(`🔍 尝试获取新句子 ${attempts}/${maxAttempts}:`, nextSentence ? nextSentence.id : 'null')
+    } while (nextSentence && nextSentence.id === currentSentenceId && attempts < maxAttempts)
+    
+    // 如果还是同一个句子，强制从筛选后的句子中随机选择一个不同的
+    if (!nextSentence || nextSentence.id === currentSentenceId) {
+      const filteredSentences = this.getFilteredSentences()
+      const differentSentences = filteredSentences.filter(s => s.id !== currentSentenceId)
+      
+      if (differentSentences.length > 0) {
+        const randomIndex = Math.floor(Math.random() * differentSentences.length)
+        nextSentence = differentSentences[randomIndex]
+        console.log(`🎲 强制随机选择不同句子:`, nextSentence.id)
+      } else if (filteredSentences.length > 0) {
+        // 如果筛选后只有一个句子，就用那个句子
+        nextSentence = filteredSentences[0]
+        console.log(`⚠️ 筛选后只有一个句子:`, nextSentence.id)
+      }
+    }
+    
+    if (nextSentence) {
+      const updateData = {
+        currentSentence: nextSentence,
+        showTranslation: false,
+        hasRecording: false,
+        audioPath: '',
+        audioQuality: null,
+        isRecording: false,
+        isPlaying: false,
+        recordDuration: 0,
+        recordDurationText: '00:00',
+        waveData: [],
+        // 显示当前句子的实际级别（如果选择的是全部）或选择的级别
+        selectedLevel: selectedLevelOption === '全部' ? nextSentence.level : selectedLevelOption
+      }
+      
+      this.setData(updateData)
+      
+      // 更新难度星星显示
+      this.updateDifficultyStars()
+      
+      // 清空波形画布
+      setTimeout(() => {
+        this.clearCanvas()
+      }, 50)
+      
+      // 清理录音服务状态
+      audioService.cleanup()
+    }
+    
+    // 更新总句数（基于筛选结果）
+    const filteredSentences = this.getFilteredSentences()
+    this.setData({
+      totalSentences: filteredSentences.length
+    })
+    
+    console.log(`✅ 级别切换完成: ${selectedLevelOption}，当前显示: ${this.data.selectedLevel}，可用句子: ${filteredSentences.length} 句`)
+    
+    // 显示提示
+    wx.showToast({
+      title: `切换到${selectedLevelOption}`,
+      icon: 'none',
+      duration: 1500
+    })
+  },
+
+  // 分类选择事件（picker版本）
+  onCategoryPickerChange(e) {
+    const selectedCategoryIndex = parseInt(e.detail.value)
+    const selectedCategoryDisplay = this.data.categoryOptions[selectedCategoryIndex]
+    const selectedCategory = selectedCategoryDisplay === '全部' ? '' : selectedCategoryDisplay
+    
+    this.setData({
+      selectedCategory,
+      selectedCategoryDisplay,
+      selectedCategoryIndex
+    })
+    
+    // 获取新的句子
+    const nextSentence = this.getNextSentence()
+    if (nextSentence) {
+      this.setData({
+        currentSentence: nextSentence,
+        showTranslation: false,
+        hasRecording: false,
+        audioQuality: null
+      })
+      
+      // 更新难度星星显示
+      this.updateDifficultyStars()
+    }
+    
+    // 更新总句数（基于筛选结果）
+    const filteredSentences = this.getFilteredSentences()
+    this.setData({
+      totalSentences: filteredSentences.length
+    })
+    
+    console.log(`📂 分类切换到: ${selectedCategoryDisplay}，可用句子: ${filteredSentences.length} 句`)
+    
+    // 显示提示
+    wx.showToast({
+      title: `切换到${selectedCategoryDisplay}`,
+      icon: 'none',
+      duration: 1500
+    })
+  },
+
+  // 获取下一个推荐句子
+  getNextSentence() {
+    const { recommendationMode, selectedCategory, selectedLevel, currentSentence } = this.data
+    let nextSentence = null
+    const currentSentenceId = currentSentence ? currentSentence.id : null
+
+    // 首先根据级别和分类筛选句子
+    let filteredSentences = this.getFilteredSentences()
+
+    switch (recommendationMode) {
+      case 'smart':
+        // 智能推荐（考虑用户水平、练习历史等，排除当前句子）
+        let attempts = 0
+        do {
+          const smartSentences = filteredSentences.filter(s => s.id !== currentSentenceId)
+          if (smartSentences.length > 0) {
+            // 使用智能推荐算法从筛选后的句子中选择
+            nextSentence = this.getSmartRecommendation(smartSentences)
+          }
+          attempts++
+        } while (nextSentence && nextSentence.id === currentSentenceId && attempts < 5)
+        break
+        
+      case 'category':
+        // 按分类筛选，排除当前句子
+        const categorySentences = filteredSentences.filter(s => s.id !== currentSentenceId)
+        if (categorySentences.length > 0) {
+          const randomIndex = Math.floor(Math.random() * categorySentences.length)
+          nextSentence = categorySentences[randomIndex]
+        }
+        break
+        
+      case 'sequential':
+        // 顺序练习
+        const currentIndex = this.data.currentIndex
+        const nextIndex = (currentIndex + 1) % filteredSentences.length
+        nextSentence = filteredSentences[nextIndex]
+        this.setData({ currentIndex: nextIndex })
+        break
+        
+      default:
+        // 随机选择（排除当前句子）
+        const randomSentences = filteredSentences.filter(s => s.id !== currentSentenceId)
+        if (randomSentences.length > 0) {
+          const randomIndex = Math.floor(Math.random() * randomSentences.length)
+          nextSentence = randomSentences[randomIndex]
+        }
+    }
+
+    // 如果没有找到合适的句子，fallback到第一个不同的句子
+    if (!nextSentence || nextSentence.id === currentSentenceId) {
+      const fallbackSentences = filteredSentences.filter(s => s.id !== currentSentenceId)
+      nextSentence = fallbackSentences[0] || filteredSentences[0] || sentenceService.sentences[0]
+    }
+
+    return nextSentence
+  },
+
+  // 根据级别和分类筛选句子
+  getFilteredSentences() {
+    const { selectedLevelIndex, selectedCategory, availableLevels } = this.data
+    let sentences = [...sentenceService.sentences]
+
+    // 级别筛选（当选择的不是"全部"时才筛选）
+    if (selectedLevelIndex > 0 && availableLevels[selectedLevelIndex] !== '全部') {
+      const selectedLevel = availableLevels[selectedLevelIndex]
+      sentences = sentences.filter(s => s.level === selectedLevel)
+    }
+
+    // 分类筛选
+    if (selectedCategory && selectedCategory !== '全部') {
+      sentences = sentences.filter(s => s.category === selectedCategory)
+    }
+
+    return sentences
+  },
+
+  // 智能推荐算法（简化版）
+  getSmartRecommendation(sentences) {
+    if (sentences.length === 0) return null
+    
+    // 获取练习历史
+    const practiceHistory = security.secureGet('practice_history') || []
+    
+    // 为每个句子计算推荐分数
+    const scoredSentences = sentences.map(sentence => {
+      let score = 0
+      
+      // 未练习过的句子优先
+      const practiced = practiceHistory.some(h => h.sentenceId === sentence.id)
+      if (!practiced) score += 50
+      
+      // 难度适配（根据用户水平）
+      const userLevel = this.getUserLevel()
+      const difficultyDiff = Math.abs((sentence.difficulty || 1) - userLevel)
+      score += Math.max(0, 20 - difficultyDiff * 5)
+      
+      // 随机因子，增加多样性
+      score += Math.random() * 30
+      
+      return { sentence, score }
+    })
+    
+    // 排序并从前30%中随机选择
+    scoredSentences.sort((a, b) => b.score - a.score)
+    const topCount = Math.max(1, Math.ceil(scoredSentences.length * 0.3))
+    const topSentences = scoredSentences.slice(0, topCount)
+    
+    const randomIndex = Math.floor(Math.random() * topSentences.length)
+    return topSentences[randomIndex].sentence
+  },
+
+  // 获取用户水平（简化版）
+  getUserLevel() {
+    const practiceHistory = security.secureGet('practice_history') || []
+    if (practiceHistory.length === 0) return 1
+    
+    const avgQuality = practiceHistory.reduce((sum, h) => sum + (h.quality || 0), 0) / practiceHistory.length
+    if (avgQuality >= 80) return 2.5 // 接近高级
+    if (avgQuality >= 60) return 2.0 // 中级
+    return 1.5 // 初级+
+  },
+
+  // 初始化语料库系统
+  async initSentenceSystem() {
+    try {
+      console.log('🚀 初始化语料库系统...')
+      
+      // 等待语料库服务初始化完成
+      if (sentenceService.sentences.length === 0) {
+        await sentenceService.initService()
+      }
+      
+      // 获取可用分类
+      const categories = sentenceService.getAllCategories()
+      const categoryOptions = ['全部', ...categories]
+      
+      // 获取推荐句子
+      const recommendedSentence = sentenceService.getRecommendedSentence()
+      
+      // 更新页面数据
+      this.setData({
+        currentSentence: recommendedSentence,
+        totalSentences: sentenceService.getTotalCount(),
+        availableCategories: categories,
+        categoryOptions: categoryOptions,
+        // 当选择全部级别时，显示当前句子的实际级别
+        selectedLevel: recommendedSentence ? recommendedSentence.level : '初级'
+      })
+      
+      // 更新难度星星显示
+      this.updateDifficultyStars()
+      
+      console.log('✅ 语料库系统初始化完成')
+      console.log(`📊 语料库统计: ${sentenceService.getTotalCount()} 句，${categories.length} 个分类`)
+      
+    } catch (error) {
+      console.error('❌ 语料库系统初始化失败:', error)
+      
+      // 使用备用句子
+      this.setData({
+        currentSentence: {
+          id: 'fallback_001',
+          content: 'Hello, how are you?',
+          translation: '你好，你好吗？',
+          level: '初级',
+          category: '问候',
+          difficulty: 1
+        },
+        totalSentences: 1,
+        availableCategories: ['问候'],
+        categoryOptions: ['全部', '问候'],
+        selectedLevel: '初级'
+      })
+      
+      // 更新难度星星显示
+      this.updateDifficultyStars()
+      
+      wx.showToast({
+        title: '语料库加载失败，使用备用内容',
+        icon: 'none',
+        duration: 3000
+      })
+    }
   },
 }) 

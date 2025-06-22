@@ -15,6 +15,47 @@ App({
       })
     }
     
+    // 强制清理所有可能损坏的数据（防止加解密错误）
+    try {
+      const security = require('./services/security.js')
+      
+      // 强制清理可能损坏的加密数据
+      const sensitiveKeys = ['practice_stats', 'user_config', 'audio_records']
+      let cleanedCount = 0
+      
+      sensitiveKeys.forEach(key => {
+        try {
+          const stored = wx.getStorageSync(key)
+          if (stored && stored.encrypted && stored.data) {
+            // 尝试解密验证
+            const decrypted = security.decryptData(stored.data)
+            if (!decrypted) {
+              // 解密失败，清理数据
+              wx.removeStorageSync(key)
+              cleanedCount++
+              console.log(`🗑️ 清理损坏数据: ${key}`)
+            }
+          }
+        } catch (error) {
+          // 任何错误都清理掉
+          try {
+            wx.removeStorageSync(key)
+            cleanedCount++
+            console.log(`🗑️ 清理异常数据: ${key}`)
+          } catch (e) {
+            // 忽略清理错误
+          }
+        }
+      })
+      
+      console.log(`🗑️ 强制清理完成，清理了 ${cleanedCount} 个损坏数据`)
+      
+      // 然后进行常规清理
+      security.cleanCorruptedData()
+    } catch (error) {
+      console.warn('⚠️ 数据清理失败:', error)
+    }
+    
     // 检查录音权限
     this.checkRecordAuth()
     

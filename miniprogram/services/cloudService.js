@@ -103,14 +103,14 @@ class CloudService {
   }
 
   /**
-   * 上传数据到云数据库
-   * @param {Object} record 记录数据
+   * 上传数据到云端
+   * @param {Object} record 练习记录
    * @returns {Promise} 上传结果
    */
   uploadToCloud(record) {
     return new Promise((resolve, reject) => {
       // 检查是否为开发环境
-      const isDevelopment = typeof __DEV__ !== 'undefined' ? __DEV__ : true
+      const isDevelopment = this.isDevEnvironment()
       const delay = isDevelopment ? 200 : (500 + Math.random() * 1000)
       
       // 模拟云数据库API调用
@@ -179,7 +179,7 @@ class CloudService {
   queryFromCloud(query, options = {}) {
     return new Promise((resolve, reject) => {
       // 检查是否为开发环境
-      const isDevelopment = typeof __DEV__ !== 'undefined' ? __DEV__ : true
+      const isDevelopment = this.isDevEnvironment()
       const delay = isDevelopment ? 100 : (300 + Math.random() * 700)
       
       // 模拟云数据库查询
@@ -212,6 +212,27 @@ class CloudService {
         }
       }, delay)
     })
+  }
+
+  /**
+   * 判断是否为开发环境
+   */
+  isDevEnvironment() {
+    // 检查多种开发环境标识
+    if (typeof __DEV__ !== 'undefined' && __DEV__) return true
+    if (typeof __wxConfig !== 'undefined' && __wxConfig.debug) return true
+    
+    // 检查是否在微信开发者工具中运行
+    try {
+      const deviceInfo = wx.getDeviceInfo()
+      if (deviceInfo.platform === 'devtools') return true
+    } catch (error) {
+      // 忽略错误，继续其他检查
+      console.warn('⚠️ 无法获取设备信息:', error)
+    }
+    
+    // 默认认为是开发环境（保守策略）
+    return true
   }
 
   /**

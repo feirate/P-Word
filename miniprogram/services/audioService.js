@@ -178,40 +178,70 @@ class AudioService {
         return
       }
 
-      // 创建音频上下文
+      // 如果已有音频上下文在播放，先停止并清理
+      if (this.audioContext) {
+        console.log('🔄 检测到已有音频上下文，先清理')
+        this.stopPlaying()
+      }
+
+      // 创建新的音频上下文
       this.audioContext = wx.createInnerAudioContext()
       this.audioContext.src = this.audioPath
+      
+      // 设置音频属性（真机优化）
+      this.audioContext.autoplay = false
+      this.audioContext.loop = false
+      this.audioContext.volume = 1.0
 
-      // 绑定播放事件
-      this.audioContext.onPlay(() => {
+      // 绑定播放事件（使用一次性监听器避免重复触发）
+      const onPlayHandler = () => {
         console.log('▶️ 开始播放录音')
         if (this.onPlayStart) {
           this.onPlayStart()
         }
-      })
+      }
 
-      this.audioContext.onEnded(() => {
+      const onEndedHandler = () => {
         console.log('⏹️ 播放结束')
-        this.audioContext.destroy()
-        this.audioContext = null
+        this.cleanupAudioContext()
+        if (this.onPlayEnd) {
+          this.onPlayEnd()
+        }
+        resolve()
+      }
+
+      const onErrorHandler = (error) => {
+        console.error('❌ 播放失败:', error)
+        this.cleanupAudioContext()
+        if (this.onPlayError) {
+          this.onPlayError(error)
+        }
+        reject(error)
+      }
+
+      // 绑定事件监听器
+      this.audioContext.onPlay(onPlayHandler)
+      this.audioContext.onEnded(onEndedHandler)
+      this.audioContext.onError(onErrorHandler)
+
+      // 真机环境下添加额外的播放状态监听
+      this.audioContext.onStop(() => {
+        console.log('⏹️ 播放被停止')
+        this.cleanupAudioContext()
         if (this.onPlayEnd) {
           this.onPlayEnd()
         }
         resolve()
       })
 
-      this.audioContext.onError((error) => {
-        console.error('❌ 播放失败:', error)
-        this.audioContext.destroy()
-        this.audioContext = null
-        if (this.onPlayError) {
-          this.onPlayError(error)
-        }
-        reject(error)
-      })
-
       // 开始播放
-      this.audioContext.play()
+      try {
+        this.audioContext.play()
+      } catch (error) {
+        console.error('❌ 播放启动失败:', error)
+        this.cleanupAudioContext()
+        reject(error)
+      }
     })
   }
 
@@ -220,9 +250,36 @@ class AudioService {
    */
   stopPlaying() {
     if (this.audioContext) {
-      this.audioContext.stop()
-      this.audioContext.destroy()
-      this.audioContext = null
+      try {
+        this.audioContext.stop()
+      } catch (error) {
+        console.warn('⚠️ 停止播放时出错:', error)
+      }
+      this.cleanupAudioContext()
+    }
+  }
+
+  /**
+   * 清理音频上下文（真机优化版）
+   * @private
+   */
+  cleanupAudioContext() {
+    if (this.audioContext) {
+      try {
+        // 移除所有事件监听器
+        this.audioContext.offPlay()
+        this.audioContext.offEnded()
+        this.audioContext.offError()
+        this.audioContext.offStop()
+        
+        // 销毁音频上下文
+        this.audioContext.destroy()
+        console.log('🧹 音频上下文已清理')
+      } catch (error) {
+        console.warn('⚠️ 清理音频上下文时出错:', error)
+      } finally {
+        this.audioContext = null
+      }
     }
   }
 
@@ -306,16 +363,17 @@ class AudioService {
    * 清理录音资源
    */
   cleanup() {
-    if (this.audioContext) {
-      this.audioContext.destroy()
-      this.audioContext = null
-    }
+    // 清理音频播放上下文
+    this.cleanupAudioContext()
     
+    // 清理录音数据
     this.audioPath = ''
     this.frameData = []
     this.waveformBuffer = []
     this.isRecording = false
     this.recordStartTime = 0
+    
+    console.log('🧹 录音服务资源已清理')
   }
 
   /**
