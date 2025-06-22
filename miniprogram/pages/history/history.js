@@ -112,12 +112,27 @@ Page({
       // 获取本地历史记录
       const history = security.secureGet('practice_history') || []
       
-      // 按时间倒序排列
-      const sortedHistory = history.sort((a, b) => b.timestamp - a.timestamp)
+      // 按时间倒序排列并处理数据
+      const sortedHistory = history
+        .sort((a, b) => b.timestamp - a.timestamp)
+        .map(item => ({
+          ...item,
+          qualityLevel: this.getQualityLevel(item.quality),
+          difficultyStars: '★'.repeat(item.difficulty || 1),
+          durationText: item.duration ? (item.duration / 1000).toFixed(1) + 's' : '未知'
+        }))
+      
+      // 设置空状态文本
+      const emptyText = history.length === 0 ? '暂无练习记录' : '没有匹配的记录'
+      const emptyTip = history.length === 0 ? '开始练习后这里会显示您的历史记录' : '尝试调整筛选条件'
+      const showEmptyAction = history.length === 0
       
       this.setData({
         practiceHistory: sortedHistory,
-        filteredHistory: sortedHistory
+        filteredHistory: sortedHistory,
+        emptyText,
+        emptyTip,
+        showEmptyAction
       })
       
       // 应用当前筛选条件
@@ -257,8 +272,18 @@ Page({
     if (selectedDifficulty > 0) {
       filtered = filtered.filter(p => p.difficulty === selectedDifficulty)
     }
+
+    // 更新空状态文本
+    const emptyText = practiceHistory.length === 0 ? '暂无练习记录' : '没有匹配的记录'
+    const emptyTip = practiceHistory.length === 0 ? '开始练习后这里会显示您的历史记录' : '尝试调整筛选条件'
+    const showEmptyAction = practiceHistory.length === 0
     
-    this.setData({ filteredHistory: filtered })
+    this.setData({ 
+      filteredHistory: filtered,
+      emptyText,
+      emptyTip,
+      showEmptyAction
+    })
     
     console.log(`🔍 筛选结果: ${filtered.length}/${practiceHistory.length} 条记录`)
   },
@@ -438,10 +463,9 @@ Page({
   },
 
   getQualityLevel(quality) {
-    if (quality >= 80) return '优秀'
-    if (quality >= 60) return '良好'
-    if (quality >= 40) return '一般'
-    return '需改进'
+    if (quality >= 80) return 'excellent'
+    if (quality >= 60) return 'good'
+    return 'poor'
   },
 
   getQualityColor(quality) {
@@ -449,5 +473,12 @@ Page({
     if (quality >= 60) return '#1890ff'
     if (quality >= 40) return '#faad14'
     return '#f5222d'
+  },
+
+  // 跳转到练习页面
+  goToPractice() {
+    wx.switchTab({
+      url: '/pages/index/index'
+    })
   }
 }) 

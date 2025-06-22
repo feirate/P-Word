@@ -1,56 +1,172 @@
 <!--history.wxml-->
 <view class="container">
-  <view class="header">
-    <icon name="trending-up" size="28" color="#2196F3" />
-    <text>历史记录页面</text>
+  <!-- 加载状态 -->
+  <view class="loading-container" wx:if="{{isLoading}}">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">加载中...</text>
   </view>
-  
-  <!-- 统计概览 -->
-  <view class="stats-overview">
-    <view class="stat-card">
-      <icon name="clock" size="24" color="#2196F3" />
-      <text class="stat-number">{{totalTime}}</text>
-      <text class="stat-label">总练习时长</text>
-    </view>
-    
-    <view class="stat-card">
-      <icon name="mic" size="24" color="#4CAF50" />
-      <text class="stat-number">{{totalSentences}}</text>
-      <text class="stat-label">完成句数</text>
-    </view>
-    
-    <view class="stat-card">
-      <icon name="trophy" size="24" color="#FFD700" />
-      <text class="stat-number">{{averageScore}}</text>
-      <text class="stat-label">平均分数</text>
-    </view>
-  </view>
-  
-  <!-- 历史记录列表 -->
-  <view class="history-list">
-    <view class="history-item" wx:for="{{historyData}}" wx:key="id">
-      <view class="item-header">
-        <icon name="calendar" size="20" color="#8C8C8C" />
-        <text class="date">{{item.date}}</text>
-        <text class="score">{{item.score}}分</text>
-      </view>
-      
-      <view class="item-content">
-        <text class="sentence">{{item.sentence}}</text>
-        <view class="item-stats">
-          <icon name="clock" size="16" color="#8C8C8C" />
-          <text class="duration">{{item.duration}}</text>
-          <icon name="audio-waveform" size="16" color="#8C8C8C" />
-          <text class="quality">质量: {{item.quality}}</text>
+
+  <!-- 主要内容 -->
+  <view class="main-content" wx:else>
+    <!-- 页面标题 -->
+    <view class="header">
+      <icon name="trending-up" size="28" color="#2196F3" />
+      <text class="header-title">练习历史</text>
+      <view class="header-actions">
+        <view class="sync-btn" bindtap="manualSync" wx:if="{{syncStatus && syncStatus.isOnline}}">
+          <icon name="cloud" size="20" color="#2196F3" />
+        </view>
+        <view class="filter-btn" bindtap="toggleFilters">
+          <icon name="filter" size="20" color="#2196F3" />
         </view>
       </view>
     </view>
-  </view>
-  
-  <!-- 空状态 -->
-  <view class="empty-state" wx:if="{{historyData.length === 0}}">
-    <icon name="book" size="48" color="#8C8C8C" />
-    <text class="empty-text">暂无练习记录</text>
-    <text class="empty-tip">开始练习后这里会显示您的历史记录</text>
+    
+    <!-- 统计概览 -->
+    <view class="stats-overview">
+      <view class="stat-card">
+        <icon name="clock" size="24" color="#2196F3" />
+        <view class="stat-content">
+          <text class="stat-number">{{statistics.totalTime}}</text>
+          <text class="stat-label">总时长(分钟)</text>
+        </view>
+      </view>
+      
+      <view class="stat-card">
+        <icon name="mic" size="24" color="#4CAF50" />
+        <view class="stat-content">
+          <text class="stat-number">{{statistics.totalPractices}}</text>
+          <text class="stat-label">练习次数</text>
+        </view>
+      </view>
+      
+      <view class="stat-card">
+        <icon name="trophy" size="24" color="#FFD700" />
+        <view class="stat-content">
+          <text class="stat-number">{{statistics.avgQuality}}</text>
+          <text class="stat-label">平均分数</text>
+        </view>
+      </view>
+      
+      <view class="stat-card">
+        <icon name="flame" size="24" color="#FF5722" />
+        <view class="stat-content">
+          <text class="stat-number">{{statistics.practiceStreak}}</text>
+          <text class="stat-label">连续天数</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 筛选面板 -->
+    <view class="filter-panel" wx:if="{{showFilters}}">
+      <view class="filter-row">
+        <text class="filter-label">日期:</text>
+        <picker mode="date" value="{{selectedDate}}" bindchange="onDateChange">
+          <view class="date-picker">
+            <text>{{selectedDate || '选择日期'}}</text>
+            <icon name="calendar" size="16" color="#666" />
+          </view>
+        </picker>
+      </view>
+      
+      <view class="filter-row">
+        <text class="filter-label">分类:</text>
+        <scroll-view class="category-scroll" scroll-x>
+          <view class="category-filters">
+            <view 
+              class="category-item {{selectedCategory === '' ? 'active' : ''}}"
+              bindtap="onCategoryChange"
+              data-category=""
+            >
+              <text>全部</text>
+            </view>
+            <view 
+              wx:for="{{availableCategories}}" 
+              wx:key="*this"
+              class="category-item {{selectedCategory === item ? 'active' : ''}}"
+              bindtap="onCategoryChange"
+              data-category="{{item}}"
+            >
+              <text>{{item}}</text>
+            </view>
+          </view>
+        </scroll-view>
+      </view>
+      
+      <view class="filter-actions">
+        <view class="clear-btn" bindtap="clearFilters">
+          <text>清除筛选</text>
+        </view>
+        <view class="export-btn" bindtap="exportData">
+          <icon name="download" size="16" color="#2196F3" />
+          <text>导出数据</text>
+        </view>
+      </view>
+    </view>
+    
+    <!-- 历史记录列表 -->
+    <view class="history-list">
+      <view 
+        wx:for="{{filteredHistory}}" 
+        wx:key="id"
+        class="history-item"
+        bindtap="viewPracticeDetail"
+        bindlongpress="deletePractice"
+        data-id="{{item.id}}"
+      >
+        <!-- 记录头部 -->
+        <view class="item-header">
+          <view class="date-info">
+            <icon name="calendar" size="18" color="#8C8C8C" />
+            <text class="date">{{item.date}}</text>
+          </view>
+          
+          <view class="quality-score {{item.qualityLevel}}">
+            <text class="score">{{item.quality}}分</text>
+          </view>
+        </view>
+        
+        <!-- 记录内容 -->
+        <view class="item-content">
+          <view class="sentence-info">
+            <text class="sentence-category">{{item.category}}</text>
+            <view class="difficulty-stars">
+              <text class="stars">{{item.difficultyStars}}</text>
+            </view>
+          </view>
+          
+          <view class="practice-stats">
+            <view class="stat-item">
+              <icon name="clock" size="14" color="#8C8C8C" />
+              <text class="duration">{{item.durationText}}</text>
+            </view>
+            
+            <view class="stat-item">
+              <icon name="check-circle" size="14" color="{{item.completed ? '#4CAF50' : '#FF9800'}}" />
+              <text class="completion">{{item.completed ? '已完成' : '未完成'}}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+    
+    <!-- 空状态 -->
+    <view class="empty-state" wx:if="{{filteredHistory.length === 0 && !isLoading}}">
+      <icon name="history" size="48" color="#CCCCCC" />
+      <text class="empty-text">{{emptyText}}</text>
+      <text class="empty-tip">{{emptyTip}}</text>
+      <view class="empty-action" wx:if="{{showEmptyAction}}" bindtap="goToPractice">
+        <text>开始练习</text>
+      </view>
+    </view>
+
+    <!-- 同步状态指示器 -->
+    <view class="sync-indicator" wx:if="{{syncStatus && lastSyncTime}}">
+      <icon name="cloud" size="16" color="#8C8C8C" />
+      <text class="sync-text">上次同步: {{lastSyncTime}}</text>
+    </view>
+
+    <!-- 底部间距 -->
+    <view class="bottom-spacer"></view>
   </view>
 </view> 

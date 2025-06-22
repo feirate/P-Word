@@ -42,10 +42,19 @@
     <!-- 句子显示 -->
     <view class="sentence-section">
       <view class="sentence-header">
-        <view class="level-badge">
-          <icon name="book" size="20" color="white" />
-          <text class="sentence-level">{{currentSentence.level}}</text>
-        </view>
+        <!-- 级别选择器（保持原有徽章样式） -->
+        <picker 
+          class="level-picker-inline"
+          mode="selector" 
+          range="{{availableLevels}}" 
+          value="{{selectedLevelIndex}}"
+          bindchange="onLevelChange"
+        >
+          <view class="level-badge">
+            <icon name="book" size="20" color="white" />
+            <text class="sentence-level">{{selectedLevel}}</text>
+          </view>
+        </picker>
         <text class="sentence-count">{{currentIndex + 1}}/{{totalSentences}}</text>
       </view>
       
@@ -54,7 +63,9 @@
           <text class="sentence-text">{{currentSentence.content}}</text>
           
           <!-- 朗读按钮 -->
-          <view class="tts-button {{isTTSPlaying ? 'playing' : ''}}" bindtap="playTextToSpeech">
+          <view class="tts-button {{isTTSPlaying ? 'playing' : ''}}" 
+                bindtap="playTextToSpeech"
+                bindlongpress="showTTSDebugPanel">
             <icon 
               name="{{isTTSPlaying ? 'volume-on' : 'volume-off'}}" 
               size="32" 
@@ -63,12 +74,21 @@
           </view>
         </view>
         
-        <!-- 句子分类标签 -->
+        <!-- 句子分类标签（改为可点击的选择器） -->
         <view class="sentence-tags" wx:if="{{currentSentence.category}}">
-          <view class="category-tag">
-            <icon name="library" size="18" color="white" />
-            <text>{{currentSentence.category}}</text>
-          </view>
+          <!-- 分类选择器 -->
+          <picker 
+            class="category-picker-inline"
+            mode="selector" 
+            range="{{categoryOptions}}" 
+            value="{{selectedCategoryIndex}}"
+            bindchange="onCategoryPickerChange"
+          >
+            <view class="category-tag">
+              <icon name="library" size="18" color="white" />
+              <text>{{selectedCategoryDisplay}}</text>
+            </view>
+          </picker>
           <view class="difficulty-tag" wx:if="{{currentSentence.difficulty}}">
             <text class="difficulty-stars">{{difficultyStars}}</text>
           </view>
@@ -89,23 +109,6 @@
         />
         <text class="text-secondary">{{showTranslation ? '收起' : '显示'}}翻译</text>
       </view>
-    </view>
-
-    <!-- 分类筛选（当模式为category时显示） -->
-    <view class="category-filter" wx:if="{{recommendationMode === 'category'}}">
-      <scroll-view class="category-scroll" scroll-x>
-        <view class="category-item {{selectedCategory === '' ? 'active' : ''}}" 
-              bindtap="selectCategory" data-category="">
-          <text>全部</text>
-        </view>
-        <view class="category-item {{selectedCategory === item ? 'active' : ''}}" 
-              wx:for="{{availableCategories}}" 
-              wx:key="*this"
-              bindtap="selectCategory" 
-              data-category="{{item}}">
-          <text>{{item}}</text>
-        </view>
-      </scroll-view>
     </view>
 
     <!-- 多邻国风格录音区域 -->
@@ -235,82 +238,56 @@
       <view class="goal-header">
         <view class="goal-info">
           <icon name="target" size="32" color="#FFD700" />
-          <text class="goal-title">今日目标</text>
-        </view>
-        <text class="goal-progress">{{practiceStats.sentenceCount}}/{{dailyGoal || 20}} 句</text>
-      </view>
-      
-      <!-- 环形进度条 -->
-      <view class="progress-ring-container">
-        <canvas 
-          type="2d"
-          canvas-id="progressRing" 
-          id="progressRing"
-          class="progress-ring"
-          style="width: 80px; height: 80px;"
-        ></canvas>
-        <view class="progress-percentage">
-          <text class="percentage-number">{{goalPercentage}}%</text>
-        </view>
-      </view>
-      
-      <!-- 今日成就 -->
-      <view class="today-achievements" wx:if="{{todayAchievements.length > 0}}">
-        <text class="achievement-text">
-          <icon name="trophy" size="24" color="#FFD700" />
-          新成就
-        </text>
-        <scroll-view class="achievement-scroll" scroll-x>
-          <view class="achievement-badge" 
-                wx:for="{{todayAchievements}}" 
-                wx:key="id">
-            <text class="badge-icon">{{item.icon}}</text>
+          <view class="goal-text">
+            <text class="goal-title">今日目标</text>
+            <text class="goal-subtitle">{{practiceStats.sentenceCount}}/{{dailyGoal}} 句</text>
           </view>
-        </scroll-view>
+        </view>
+        <text class="goal-percentage">{{goalPercentage}}%</text>
+      </view>
+      
+      <!-- 进度条 -->
+      <view class="progress-bar">
+        <view class="progress-fill" style="width: {{goalPercentage}}%"></view>
       </view>
     </view>
 
-    <!-- 练习统计 -->
-    <view class="practice-stats">
-      <view class="stats-grid">
-        <view class="stat-item">
-          <icon name="clock" size="32" color="#2196F3" />
-          <text class="stats-number">{{practiceStats.sessionTime}}</text>
-          <text class="stats-label">练习时长</text>
-        </view>
-        
-        <view class="stat-item">
-          <icon name="trophy" size="32" color="#FFD700" />
-          <text class="stats-number">{{practiceStats.bestScore || '--'}}</text>
-          <text class="stats-label">最佳评分</text>
-        </view>
+    <!-- 快捷操作区域 -->
+    <view class="quick-actions">
+      <view class="action-item" bindtap="goToHistory">
+        <icon name="trending-up" size="28" color="#2196F3" />
+        <text class="action-label">历史</text>
       </view>
-    </view>
-
-    <!-- 快捷操作 - 合并到目标区域 -->
-    <view class="integrated-actions">
-      <button class="action-btn" bindtap="goToHistory">
-        <view class="action-icon">
-          <icon name="trending-up" size="24" color="#2196F3" />
-        </view>
-        <text class="action-text">练习历史</text>
-      </button>
       
-      <button class="action-btn" bindtap="goToLibrary">
-        <view class="action-icon">
-          <icon name="library" size="24" color="#2196F3" />
-        </view>
-        <text class="action-text">语料库</text>
-      </button>
+      <view class="action-item" bindtap="goToLibrary">
+        <icon name="library" size="28" color="#4CAF50" />
+        <text class="action-label">语料库</text>
+      </view>
       
-      <button class="action-btn" bindtap="shareProgress">
-        <view class="action-icon">
-          <icon name="target" size="24" color="#2196F3" />
-        </view>
-        <text class="action-text">分享练习</text>
-      </button>
+      <view class="action-item" bindtap="goToSettings">
+        <icon name="settings" size="28" color="#8C8C8C" />
+        <text class="action-label">设置</text>
+      </view>
     </view>
   </view>
 
-
+  <!-- 权限申请弹框 -->
+  <view class="auth-modal" wx:if="{{showAuthModal}}">
+    <view class="modal-backdrop" bindtap="hideAuthModal"></view>
+    <view class="modal-content">
+      <view class="modal-header">
+        <icon name="mic" size="48" color="#4A90E2" />
+        <text class="modal-title">需要录音权限</text>
+      </view>
+      
+      <view class="modal-body">
+        <text class="modal-text">为了使用语音练习功能，我们需要您的录音权限。您的录音数据仅用于本地分析，不会上传到服务器。</text>
+      </view>
+      
+      <view class="modal-actions">
+        <button class="modal-btn cancel-btn" bindtap="hideAuthModal">取消</button>
+        <button class="modal-btn confirm-btn" bindtap="requestAuth">授权</button>
+      </view>
+    </view>
+  </view>
 </view> 

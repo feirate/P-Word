@@ -1,1 +1,414 @@
 /* pages/history/history.wxss */
+.container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #F5F7FA 0%, #C3CFE2 100%);
+  padding-bottom: 120rpx;
+}
+
+/* 加载状态 */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 50vh;
+}
+
+.loading-spinner {
+  width: 60rpx;
+  height: 60rpx;
+  border: 6rpx solid #E3F2FD;
+  border-top: 6rpx solid #2196F3;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.loading-text {
+  margin-top: 20rpx;
+  color: #666;
+  font-size: 28rpx;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* 主要内容 */
+.main-content {
+  padding: 0 30rpx;
+}
+
+/* 页面标题 */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 40rpx 0 30rpx;
+}
+
+.header-title {
+  flex: 1;
+  margin-left: 20rpx;
+  font-size: 48rpx;
+  font-weight: bold;
+  color: #2196F3;
+}
+
+.header-actions {
+  display: flex;
+  gap: 15rpx;
+}
+
+.sync-btn, .filter-btn {
+  width: 60rpx;
+  height: 60rpx;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4rpx 12rpx rgba(33, 150, 243, 0.2);
+  transition: all 0.3s ease;
+}
+
+.sync-btn:active, .filter-btn:active {
+  transform: scale(0.9);
+  background: rgba(33, 150, 243, 0.1);
+}
+
+/* 统计概览 */
+.stats-overview {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 30rpx;
+  gap: 12rpx;
+}
+
+.stat-card {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 20rpx;
+  padding: 25rpx 15rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow: 0 8rpx 24rpx rgba(33, 150, 243, 0.1);
+  backdrop-filter: blur(10rpx);
+}
+
+.stat-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 10rpx;
+}
+
+.stat-number {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 5rpx;
+}
+
+.stat-label {
+  font-size: 22rpx;
+  color: #666;
+  text-align: center;
+}
+
+/* 筛选面板 */
+.filter-panel {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 20rpx;
+  padding: 30rpx;
+  margin-bottom: 30rpx;
+  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(10rpx);
+}
+
+.filter-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 25rpx;
+}
+
+.filter-row:last-child {
+  margin-bottom: 0;
+}
+
+.filter-label {
+  font-size: 28rpx;
+  color: #333;
+  font-weight: 500;
+  width: 100rpx;
+  flex-shrink: 0;
+}
+
+.date-picker {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(33, 150, 243, 0.1);
+  border-radius: 15rpx;
+  padding: 15rpx 20rpx;
+  flex: 1;
+  margin-left: 20rpx;
+}
+
+.date-picker text {
+  font-size: 26rpx;
+  color: #2196F3;
+}
+
+.category-scroll {
+  flex: 1;
+  margin-left: 20rpx;
+}
+
+.category-filters {
+  display: flex;
+  white-space: nowrap;
+  gap: 15rpx;
+}
+
+.category-item {
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.7);
+  border: 2rpx solid transparent;
+  border-radius: 20rpx;
+  padding: 12rpx 20rpx;
+  font-size: 24rpx;
+  color: #666;
+  transition: all 0.3s ease;
+}
+
+.category-item.active {
+  background: #2196F3;
+  color: white;
+  box-shadow: 0 4rpx 12rpx rgba(33, 150, 243, 0.3);
+}
+
+.filter-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 25rpx;
+  padding-top: 25rpx;
+  border-top: 2rpx solid rgba(0, 0, 0, 0.05);
+}
+
+.clear-btn, .export-btn {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  padding: 15rpx 25rpx;
+  border-radius: 15rpx;
+  font-size: 26rpx;
+  transition: all 0.3s ease;
+}
+
+.clear-btn {
+  background: rgba(255, 152, 0, 0.1);
+  color: #FF9800;
+  border: 2rpx solid rgba(255, 152, 0, 0.2);
+}
+
+.export-btn {
+  background: rgba(33, 150, 243, 0.1);
+  color: #2196F3;
+  border: 2rpx solid rgba(33, 150, 243, 0.2);
+}
+
+.clear-btn:active, .export-btn:active {
+  transform: scale(0.95);
+}
+
+/* 历史记录列表 */
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.history-item {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 20rpx;
+  padding: 30rpx;
+  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(10rpx);
+  transition: all 0.3s ease;
+  border-left: 6rpx solid transparent;
+}
+
+.history-item:active {
+  transform: scale(0.98);
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.15);
+}
+
+/* 记录头部 */
+.item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20rpx;
+}
+
+.date-info {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
+
+.date {
+  font-size: 26rpx;
+  color: #666;
+}
+
+.quality-score {
+  padding: 8rpx 16rpx;
+  border-radius: 15rpx;
+  font-weight: bold;
+}
+
+.quality-score.excellent {
+  background: rgba(76, 175, 80, 0.1);
+  border-left-color: #4CAF50;
+}
+
+.quality-score.excellent .score {
+  color: #4CAF50;
+}
+
+.quality-score.good {
+  background: rgba(255, 193, 7, 0.1);
+  border-left-color: #FFC107;
+}
+
+.quality-score.good .score {
+  color: #FFC107;
+}
+
+.quality-score.poor {
+  background: rgba(244, 67, 54, 0.1);
+  border-left-color: #F44336;
+}
+
+.quality-score.poor .score {
+  color: #F44336;
+}
+
+.score {
+  font-size: 24rpx;
+}
+
+/* 记录内容 */
+.item-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sentence-info {
+  display: flex;
+  align-items: center;
+  gap: 15rpx;
+}
+
+.sentence-category {
+  background: rgba(33, 150, 243, 0.1);
+  color: #2196F3;
+  font-size: 22rpx;
+  padding: 6rpx 12rpx;
+  border-radius: 12rpx;
+  font-weight: 500;
+}
+
+.difficulty-stars {
+  display: flex;
+  align-items: center;
+}
+
+.stars {
+  color: #FFD700;
+  font-size: 20rpx;
+}
+
+.practice-stats {
+  display: flex;
+  gap: 20rpx;
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+}
+
+.duration, .completion {
+  font-size: 22rpx;
+  color: #666;
+}
+
+/* 空状态 */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 100rpx 50rpx;
+  text-align: center;
+}
+
+.empty-text {
+  font-size: 32rpx;
+  color: #999;
+  margin: 30rpx 0 15rpx;
+  font-weight: 500;
+}
+
+.empty-tip {
+  font-size: 26rpx;
+  color: #CCCCCC;
+  margin-bottom: 40rpx;
+  line-height: 1.5;
+}
+
+.empty-action {
+  background: #2196F3;
+  color: white;
+  padding: 20rpx 40rpx;
+  border-radius: 25rpx;
+  font-size: 26rpx;
+  transition: all 0.3s ease;
+}
+
+.empty-action:active {
+  background: #1976D2;
+  transform: scale(0.95);
+}
+
+/* 同步状态指示器 */
+.sync-indicator {
+  position: fixed;
+  bottom: 120rpx;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 12rpx 20rpx;
+  border-radius: 20rpx;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10rpx);
+}
+
+.sync-text {
+  font-size: 22rpx;
+  color: #666;
+}
+
+/* 底部间距 */
+.bottom-spacer {
+  height: 50rpx;
+}

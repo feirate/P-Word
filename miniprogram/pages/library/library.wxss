@@ -1,16 +1,413 @@
 /* pages/library/library.wxss */
 .container {
-  padding: 40rpx;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #F5F7FA 0%, #C3CFE2 100%);
+  padding-bottom: 120rpx;
+}
+
+/* 加载状态 */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 50vh;
+}
+
+.loading-spinner {
+  width: 60rpx;
+  height: 60rpx;
+  border: 6rpx solid #E3F2FD;
+  border-top: 6rpx solid #2196F3;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.loading-text {
+  margin-top: 20rpx;
+  color: #666;
+  font-size: 28rpx;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* 主要内容 */
+.main-content {
+  padding: 0 30rpx;
+}
+
+/* 页面标题 */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 40rpx 0 30rpx;
+}
+
+.header-title {
+  flex: 1;
+  margin-left: 20rpx;
+  font-size: 48rpx;
+  font-weight: bold;
+  color: #2196F3;
+}
+
+.header-stats {
+  background: rgba(33, 150, 243, 0.1);
+  border-radius: 20rpx;
+  padding: 10rpx 20rpx;
+}
+
+.stats-text {
+  font-size: 24rpx;
+  color: #2196F3;
+  font-weight: 500;
+}
+
+/* 统计概览 */
+.stats-overview {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 30rpx;
+  gap: 15rpx;
+}
+
+.stat-card {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 20rpx;
+  padding: 25rpx 15rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow: 0 8rpx 24rpx rgba(33, 150, 243, 0.1);
+  backdrop-filter: blur(10rpx);
+}
+
+.stat-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 10rpx;
+}
+
+.stat-number {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 5rpx;
+}
+
+.stat-label {
+  font-size: 22rpx;
+  color: #666;
+}
+
+/* 搜索栏 */
+.search-section {
+  margin-bottom: 30rpx;
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 25rpx;
+  padding: 20rpx 30rpx;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10rpx);
+}
+
+.search-input {
+  flex: 1;
+  margin-left: 15rpx;
+  font-size: 28rpx;
+  color: #333;
+}
+
+.search-clear {
+  padding: 10rpx;
+  border-radius: 50%;
+  background: rgba(140, 140, 140, 0.1);
+}
+
+/* 筛选和排序 */
+.filter-section {
+  margin-bottom: 30rpx;
+}
+
+.category-scroll {
+  margin-bottom: 20rpx;
+}
+
+.category-filters {
+  display: flex;
+  white-space: nowrap;
+  gap: 15rpx;
+  padding: 0 5rpx;
+}
+
+.category-item {
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.7);
+  border: 2rpx solid transparent;
+  border-radius: 25rpx;
+  padding: 15rpx 25rpx;
+  font-size: 26rpx;
+  color: #666;
+  transition: all 0.3s ease;
+}
+
+.category-item.active {
+  background: #2196F3;
+  color: white;
+  box-shadow: 0 4rpx 12rpx rgba(33, 150, 243, 0.3);
+}
+
+.filter-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.difficulty-filter {
+  display: flex;
+  gap: 10rpx;
+}
+
+.difficulty-item {
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 20rpx;
+  padding: 12rpx 20rpx;
+  font-size: 24rpx;
+  color: #666;
+  min-width: 60rpx;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.difficulty-item.active {
+  background: #FF9800;
+  color: white;
+  box-shadow: 0 4rpx 12rpx rgba(255, 152, 0, 0.3);
+}
+
+.sort-control {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 20rpx;
+  padding: 12rpx 20rpx;
+  gap: 8rpx;
+}
+
+.sort-text {
+  font-size: 24rpx;
+  color: #2196F3;
+}
+
+/* 句子列表 */
+.sentence-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.sentence-item {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 20rpx;
+  padding: 30rpx;
+  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(10rpx);
+  transition: all 0.3s ease;
+  border-left: 6rpx solid transparent;
+}
+
+.sentence-item.practiced {
+  border-left-color: #4CAF50;
+  background: rgba(76, 175, 80, 0.05);
+}
+
+.sentence-item:active {
+  transform: scale(0.98);
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.15);
+}
+
+/* 句子头部 */
+.sentence-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20rpx;
+}
+
+.sentence-meta {
+  display: flex;
+  align-items: center;
+  gap: 15rpx;
+}
+
+.sentence-category {
+  background: rgba(33, 150, 243, 0.1);
+  color: #2196F3;
+  font-size: 22rpx;
+  padding: 8rpx 16rpx;
+  border-radius: 15rpx;
+  font-weight: 500;
+}
+
+.difficulty-stars {
+  display: flex;
+  align-items: center;
+}
+
+.stars {
+  color: #FFD700;
+  font-size: 24rpx;
+}
+
+.sentence-status {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
+
+.practice-badge {
+  display: flex;
+  align-items: center;
+  background: rgba(76, 175, 80, 0.1);
+  border-radius: 15rpx;
+  padding: 6rpx 12rpx;
+  gap: 6rpx;
+}
+
+.badge-text {
+  font-size: 20rpx;
+  color: #4CAF50;
+  font-weight: 500;
+}
+
+.quality-score {
+  background: rgba(255, 193, 7, 0.1);
+  border-radius: 15rpx;
+  padding: 6rpx 12rpx;
+}
+
+.score-text {
+  font-size: 20rpx;
+  color: #FFC107;
+  font-weight: bold;
+}
+
+/* 句子内容 */
+.sentence-content {
+  margin-bottom: 25rpx;
+}
+
+.sentence-text {
+  display: block;
+  font-size: 32rpx;
+  color: #333;
+  line-height: 1.6;
+  margin-bottom: 15rpx;
+  font-weight: 500;
+}
+
+.sentence-translation {
+  display: block;
+  font-size: 26rpx;
+  color: #666;
+  line-height: 1.5;
+}
+
+/* 操作按钮 */
+.sentence-actions {
+  display: flex;
+  gap: 15rpx;
+}
+
+.action-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+  padding: 18rpx 25rpx;
+  border-radius: 15rpx;
+  font-size: 26rpx;
+  transition: all 0.3s ease;
+}
+
+.play-btn {
+  background: rgba(33, 150, 243, 0.1);
+  color: #2196F3;
+  border: 2rpx solid rgba(33, 150, 243, 0.2);
+}
+
+.play-btn:active {
+  background: rgba(33, 150, 243, 0.2);
+  transform: scale(0.95);
+}
+
+.play-btn.playing {
+  background: #2196F3;
+  color: white;
+  box-shadow: 0 4rpx 12rpx rgba(33, 150, 243, 0.3);
+}
+
+.practice-btn {
+  background: rgba(76, 175, 80, 0.1);
+  color: #4CAF50;
+  border: 2rpx solid rgba(76, 175, 80, 0.2);
+}
+
+.practice-btn:active {
+  background: rgba(76, 175, 80, 0.2);
+  transform: scale(0.95);
+}
+
+/* 空状态 */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 100rpx 50rpx;
   text-align: center;
 }
 
-.title {
-  font-size: 36rpx;
-  color: #333;
-  margin-bottom: 40rpx;
+.empty-text {
+  font-size: 32rpx;
+  color: #999;
+  margin: 30rpx 0 15rpx;
+  font-weight: 500;
 }
 
-.description {
-  color: #666;
-  font-size: 28rpx;
+.empty-tip {
+  font-size: 26rpx;
+  color: #CCCCCC;
+  margin-bottom: 40rpx;
+  line-height: 1.5;
+}
+
+.empty-action {
+  background: #2196F3;
+  color: white;
+  padding: 20rpx 40rpx;
+  border-radius: 25rpx;
+  font-size: 26rpx;
+  transition: all 0.3s ease;
+}
+
+.empty-action:active {
+  background: #1976D2;
+  transform: scale(0.95);
+}
+
+/* 底部间距 */
+.bottom-spacer {
+  height: 50rpx;
 } 
