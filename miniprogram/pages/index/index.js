@@ -121,13 +121,27 @@ Page({
     this.loadTodayStats()
   },
 
-  // 初始化页面数据
+  // 初始化页面数据（性能优化版）
   initPageData() {
+    // 性能监控：记录初始化开始时间
+    const initStartTime = Date.now()
+    
     const date = new Date()
     const month = (date.getMonth() + 1).toString().padStart(2, '0')
     const day = date.getDate().toString().padStart(2, '0')
     const currentDate = `${month}.${day}`
     this.setData({ currentDate })
+    
+    // 性能监控：记录初始化完成时间
+    const initTime = Date.now() - initStartTime
+    console.log(`⚡ 页面数据初始化耗时: ${initTime}ms`)
+    
+    // 存储性能指标
+    this.performanceMetrics = {
+      initTime,
+      renderTimes: [],
+      startTime: Date.now()
+    }
   },
 
   // 检查录音权限（增强版）
@@ -191,6 +205,7 @@ Page({
         })
         
         this.stopRecordTimer()
+        this.stopWaveformAnimation() // 停止波形动画
         this.saveRecordingStats(result)
         
         // 显示录音质量提示
@@ -534,11 +549,62 @@ Page({
     }
   },
 
-  // 更新波形显示（优化版）
+  // 更新波形显示（优化版 - 支持动画）
   updateWaveform(waveData) {
     // 直接使用音频服务处理过的高质量波形数据
     this.setData({ waveData })
     this.drawWaveform()
+    
+    // 录音时启动动画循环（脉冲效果）
+    if (this.data.isRecording && !this.waveformAnimationId) {
+      this.startWaveformAnimation()
+    }
+  },
+
+  // 启动波形动画循环（性能优化版 - 智能帧率控制）
+  startWaveformAnimation() {
+    // 根据设备性能动态调整帧率
+    const deviceInfo = wx.getDeviceInfo && wx.getDeviceInfo() || {}
+    const pixelRatio = deviceInfo.pixelRatio || 2
+    const isHighPerformance = pixelRatio <= 2
+    const targetFPS = isHighPerformance ? 30 : 20
+    const frameInterval = 1000 / targetFPS
+    
+    let lastFrameTime = 0
+    
+    const animate = (currentTime = Date.now()) => {
+      if (this.data.isRecording) {
+        // 帧率控制：只在达到目标间隔时才绘制
+        if (currentTime - lastFrameTime >= frameInterval) {
+          this.drawWaveform()
+          lastFrameTime = currentTime
+        }
+        
+        // 使用requestAnimationFrame或setTimeout的智能选择
+        if (typeof requestAnimationFrame !== 'undefined') {
+          this.waveformAnimationId = requestAnimationFrame(animate)
+        } else {
+          this.waveformAnimationId = setTimeout(() => animate(), frameInterval)
+        }
+      } else {
+        this.stopWaveformAnimation()
+      }
+    }
+    
+    animate()
+  },
+
+  // 停止波形动画循环（优化版 - 支持多种动画API）
+  stopWaveformAnimation() {
+    if (this.waveformAnimationId) {
+      // 智能清理：支持requestAnimationFrame和setTimeout
+      if (typeof cancelAnimationFrame !== 'undefined') {
+        cancelAnimationFrame(this.waveformAnimationId)
+      } else {
+        clearTimeout(this.waveformAnimationId)
+      }
+      this.waveformAnimationId = null
+    }
   },
 
   // 安全绘制圆角矩形的辅助函数
@@ -600,9 +666,9 @@ Page({
       })
   },
 
-  // 新版Canvas 2D绘制
+  // 新版Canvas 2D绘制（优化版 - 支持脉冲动画和音量颜色映射）
   drawWaveformNew(canvasInfo) {
-    const { canvasWidth, canvasHeight, waveData } = this.data
+    const { canvasWidth, canvasHeight, waveData, isRecording } = this.data
     
     // 检查canvas节点是否有效
     if (!canvasInfo || !canvasInfo.node) {
@@ -630,7 +696,7 @@ Page({
     // 清除画布
     ctx.clearRect(0, 0, canvasWidth, canvasHeight)
     
-    // 多邻国风格的条状波形绘制
+    // 多邻国风格的条状波形绘制（优化版）
     if (waveData.length > 0) {
       const barCount = Math.min(40, waveData.length) // 限制条数，避免过密
       const barWidth = 4 // 固定条宽
@@ -639,23 +705,32 @@ Page({
       const startX = (canvasWidth - totalWidth) / 2 // 居中显示
       const centerY = canvasHeight / 2
       
-      // 设置条状波形样式
-      ctx.fillStyle = '#58CC02' // 多邻国绿色
-      ctx.strokeStyle = 'none'
+      // 录音时的动画时间控制
+      const time = isRecording ? Date.now() / 1000 : 0
       
       for (let i = 0; i < barCount; i++) {
         const dataIndex = Math.floor((i / barCount) * waveData.length)
         const amplitude = waveData[dataIndex] || 0
-        const barHeight = Math.max(4, amplitude * canvasHeight * 0.8) // 最小高度4px
+        
+        let barHeight = Math.max(4, amplitude * canvasHeight * 0.8) // 最小高度4px
+        
+        // 录音时添加脉冲动画效果
+        if (isRecording && amplitude > 0.1) {
+          const pulseOffset = Math.sin(time * 3 + i * 0.2) * 0.2
+          barHeight = Math.max(4, (amplitude + pulseOffset) * canvasHeight * 0.8)
+        }
         
         const x = startX + i * (barWidth + barGap)
         const y = centerY - barHeight / 2
         
-                 // 绘制圆角矩形条
-         ctx.beginPath()
-         const radius = barWidth / 2
-         this.safeDrawRoundRect(ctx, x, y, barWidth, barHeight, radius)
-         ctx.fill()
+        // 基于音量级别的动态颜色映射
+        ctx.fillStyle = this.getVolumeBasedColor(amplitude, isRecording)
+        
+        // 绘制圆角矩形条
+        ctx.beginPath()
+        const radius = barWidth / 2
+        this.safeDrawRoundRect(ctx, x, y, barWidth, barHeight, radius)
+        ctx.fill()
       }
     } else {
       // 无数据时显示静态的占位条
@@ -669,7 +744,7 @@ Page({
       ctx.fillStyle = '#E5E7EB' // 灰色占位
       
       for (let i = 0; i < barCount; i++) {
-        const barHeight = 8 + Math.random() * 20 // 随机高度占位
+        const barHeight = 8 + Math.random() * 12 // 随机高度占位（减少高度差异）
         const x = startX + i * (barWidth + barGap)
         const y = centerY - barHeight / 2
         
@@ -732,6 +807,34 @@ Page({
     }
     
     ctx.draw()
+  },
+
+  // 基于音量级别的颜色映射（新增优化功能）
+  getVolumeBasedColor(amplitude, isRecording = false) {
+    const volume = Math.min(1, amplitude)
+    
+    if (!isRecording) {
+      // 非录音状态：使用统一的多邻国绿色
+      return '#58CC02'
+    }
+    
+    // 录音状态：基于音量级别的动态颜色
+    if (volume < 0.15) {
+      // 极低音量 - 浅灰色（提示用户说话声音太小）
+      return '#D1D5DB'
+    } else if (volume < 0.3) {
+      // 低音量 - 浅绿色
+      return '#84CC16'
+    } else if (volume < 0.6) {
+      // 中等音量 - 多邻国标准绿（最佳录音音量）
+      return '#58CC02'
+    } else if (volume < 0.85) {
+      // 较高音量 - 深绿色
+      return '#16A34A'
+    } else {
+      // 过高音量 - 橙色警告（提示音量过大）
+      return '#F59E0B'
+    }
   },
 
   // 初始化语料库系统
@@ -1230,6 +1333,9 @@ Page({
     if (this.syncIndicatorTimer) {
       clearTimeout(this.syncIndicatorTimer)
     }
+    
+    // 清理波形动画定时器
+    this.stopWaveformAnimation()
     
     // 清理录音服务
     audioService.cleanup()
