@@ -34,12 +34,13 @@ class SentenceService {
       // 直接使用内置数据确保稳定性
       const beginnerData = this.getBeginnerSentences()
       const intermediateData = this.getIntermediateSentences()
+      const advancedData = this.getAdvancedSentences()
       
       // 合并所有句子
-      this.sentences = [...beginnerData, ...intermediateData]
+      this.sentences = [...beginnerData, ...intermediateData, ...advancedData]
       
       console.log(`✅ 语料库加载完成: ${this.sentences.length} 句`)
-      console.log(`📊 语料库统计: ${beginnerData.length} 条初级，${intermediateData.length} 条中级`)
+      console.log(`📊 语料库统计: ${beginnerData.length} 条初级，${intermediateData.length} 条中级，${advancedData.length} 条高级`)
       
       return this.sentences
     } catch (error) {
@@ -370,6 +371,149 @@ class SentenceService {
   }
 
   /**
+   * 获取高级语料库数据（新增）
+   */
+  getAdvancedSentences() {
+    return [
+      {
+        id: 'advanced_001',
+        content: 'If I were you, I would reconsider that decision carefully.',
+        translation: '如果我是你，我会仔细重新考虑那个决定。',
+        level: '高级',
+        category: '建议',
+        tags: ['advice', 'conditional', 'formal'],
+        difficulty: 3
+      },
+      {
+        id: 'advanced_002',
+        content: 'Despite the challenges, we managed to complete the project on time.',
+        translation: '尽管面临挑战，我们还是按时完成了项目。',
+        level: '高级',
+        category: '工作',
+        tags: ['work', 'achievement', 'challenges'],
+        difficulty: 3
+      },
+      {
+        id: 'advanced_003',
+        content: 'I appreciate your patience while we resolve this issue.',
+        translation: '我们解决这个问题期间，感谢您的耐心。',
+        level: '高级',
+        category: '客服',
+        tags: ['customer service', 'appreciation', 'formal'],
+        difficulty: 3
+      },
+      {
+        id: 'advanced_004',
+        content: 'The presentation was both informative and engaging.',
+        translation: '这个演示既有信息量又很吸引人。',
+        level: '高级',
+        category: '评价',
+        tags: ['evaluation', 'presentation', 'positive'],
+        difficulty: 3
+      },
+      {
+        id: 'advanced_005',
+        content: 'I would like to propose an alternative solution to this problem.',
+        translation: '我想为这个问题提出一个替代解决方案。',
+        level: '高级',
+        category: '商务',
+        tags: ['business', 'proposal', 'solution'],
+        difficulty: 3
+      },
+      {
+        id: 'advanced_006',
+        content: 'The economic situation has improved significantly over the past year.',
+        translation: '过去一年经济状况有了显著改善。',
+        level: '高级',
+        category: '经济',
+        tags: ['economy', 'improvement', 'analysis'],
+        difficulty: 3
+      },
+      {
+        id: 'advanced_007',
+        content: "It's essential that we maintain the highest standards of quality.",
+        translation: '我们必须保持最高的质量标准。',
+        level: '高级',
+        category: '质量管理',
+        tags: ['quality', 'standards', 'importance'],
+        difficulty: 3
+      },
+      {
+        id: 'advanced_008',
+        content: 'The research findings suggest a strong correlation between these factors.',
+        translation: '研究结果表明这些因素之间存在强相关性。',
+        level: '高级',
+        category: '学术',
+        tags: ['research', 'correlation', 'academic'],
+        difficulty: 3
+      },
+      {
+        id: 'advanced_009',
+        content: 'We need to implement these changes gradually to minimize disruption.',
+        translation: '我们需要逐步实施这些变化以减少干扰。',
+        level: '高级',
+        category: '管理',
+        tags: ['management', 'implementation', 'strategy'],
+        difficulty: 3
+      },
+      {
+        id: 'advanced_010',
+        content: "I'm confident that this investment will yield positive results.",
+        translation: '我相信这项投资会产生积极的结果。',
+        level: '高级',
+        category: '投资',
+        tags: ['investment', 'confidence', 'results'],
+        difficulty: 3
+      },
+      {
+        id: 'advanced_011',
+        content: 'The complexity of this issue requires careful consideration.',
+        translation: '这个问题的复杂性需要仔细考虑。',
+        level: '高级',
+        category: '分析',
+        tags: ['complexity', 'analysis', 'consideration'],
+        difficulty: 3
+      },
+      {
+        id: 'advanced_012',
+        content: 'We should explore all available options before making a decision.',
+        translation: '我们应该在做决定之前探索所有可用的选择。',
+        level: '高级',
+        category: '决策',
+        tags: ['decision making', 'options', 'exploration'],
+        difficulty: 3
+      },
+      {
+        id: 'advanced_013',
+        content: 'The technological advancement has revolutionized our industry.',
+        translation: '技术进步已经彻底改变了我们的行业。',
+        level: '高级',
+        category: '技术',
+        tags: ['technology', 'revolution', 'industry'],
+        difficulty: 3
+      },
+      {
+        id: 'advanced_014',
+        content: 'I would appreciate it if you could provide more detailed information.',
+        translation: '如果您能提供更详细的信息，我将不胜感激。',
+        level: '高级',
+        category: '请求',
+        tags: ['request', 'formal', 'detailed'],
+        difficulty: 3
+      },
+      {
+        id: 'advanced_015',
+        content: 'The environmental impact of this project must be carefully assessed.',
+        translation: '必须仔细评估这个项目的环境影响。',
+        level: '高级',
+        category: '环保',
+        tags: ['environment', 'assessment', 'impact'],
+        difficulty: 3
+      }
+    ]
+  }
+
+  /**
    * 加载用户偏好设置
    */
   loadUserPreferences() {
@@ -405,7 +549,10 @@ class SentenceService {
       excludeCompleted = true,
       smartRecommend = true,
       forceLevel = null,
-      excludeIds = [] // 排除特定ID的句子
+      excludeIds = [], // 排除特定ID的句子
+      categoryFilter = null, // 新增：指定分类过滤
+      random = false, // 新增：随机模式
+      sequential = false // 新增：顺序模式
     } = options
 
     let candidates = [...this.sentences]
@@ -426,8 +573,10 @@ class SentenceService {
     const [minDiff, maxDiff] = this.userPreferences.difficultyRange
     candidates = candidates.filter(s => s.difficulty >= minDiff && s.difficulty <= maxDiff)
 
-    // 3. 根据偏好分类筛选
-    if (this.userPreferences.preferredCategories.length > 0) {
+    // 3. 根据分类筛选（优先使用categoryFilter参数）
+    if (categoryFilter) {
+      candidates = candidates.filter(s => s.category === categoryFilter)
+    } else if (this.userPreferences.preferredCategories.length > 0) {
       candidates = candidates.filter(s => 
         this.userPreferences.preferredCategories.includes(s.category)
       )
@@ -444,49 +593,91 @@ class SentenceService {
       candidates = this.sentences.filter(s => 
         s.difficulty <= maxDiff + 1 // 放宽难度要求
       )
+      
+      // 如果还是为空，使用所有句子
+      if (candidates.length === 0) {
+        candidates = [...this.sentences]
+      }
     }
 
-    // 6. 智能推荐排序
-    if (smartRecommend && candidates.length > 1) {
+    // 6. 根据模式选择推荐策略
+    let recommended
+    
+    if (random && candidates.length > 0) {
+      // 随机模式
+      const randomIndex = Math.floor(Math.random() * candidates.length)
+      recommended = candidates[randomIndex]
+    } else if (sequential && candidates.length > 0) {
+      // 顺序模式（循环选择）
+      this.currentIndex = (this.currentIndex || 0) % candidates.length
+      recommended = candidates[this.currentIndex]
+      this.currentIndex++
+    } else if (smartRecommend && candidates.length > 1) {
+      // 智能推荐排序
       candidates = this.sortBySmartRecommendation(candidates)
+      recommended = candidates[0]
+    } else {
+      // 默认选择第一个
+      recommended = candidates[0]
     }
 
-    // 7. 返回推荐结果
-    const recommended = candidates[0] || this.sentences[0]
+    // 7. 最终fallback
+    if (!recommended) {
+      recommended = this.sentences[0]
+    }
     
     console.log(`🎯 推荐句子: [${recommended.level}] ${recommended.content}`)
     return recommended
   }
 
   /**
-   * 智能推荐排序
+   * 智能推荐排序（修复版 - 增加随机性和多样性）
    * @param {Array} sentences 候选句子
    * @returns {Array} 排序后的句子
    */
   sortBySmartRecommendation(sentences) {
-    return sentences.sort((a, b) => {
-      let scoreA = 0
-      let scoreB = 0
+    // 计算每个句子的评分
+    const scoredSentences = sentences.map(sentence => {
+      let score = 0
 
       // 1. 难度适配评分（偏好中等难度）
       const userLevel = this.getUserLevel()
-      scoreA += this.getDifficultyScore(a.difficulty, userLevel)
-      scoreB += this.getDifficultyScore(b.difficulty, userLevel)
+      score += this.getDifficultyScore(sentence.difficulty, userLevel)
 
       // 2. 分类多样性评分
-      scoreA += this.getCategoryDiversityScore(a.category)
-      scoreB += this.getCategoryDiversityScore(b.category)
+      score += this.getCategoryDiversityScore(sentence.category)
 
       // 3. 练习频率评分（避免过度重复）
-      scoreA += this.getFrequencyScore(a.id)
-      scoreB += this.getFrequencyScore(b.id)
+      score += this.getFrequencyScore(sentence.id)
 
       // 4. 时间间隔评分（适当的复习间隔）
-      scoreA += this.getIntervalScore(a.id)
-      scoreB += this.getIntervalScore(b.id)
+      score += this.getIntervalScore(sentence.id)
 
-      return scoreB - scoreA // 降序排列
+      // 5. 新增：随机性评分（避免总是选择相同句子）
+      score += Math.random() * 5
+
+      return { sentence, score }
     })
+
+    // 按评分排序
+    scoredSentences.sort((a, b) => b.score - a.score)
+
+    // 从前30%的高分句子中随机选择，增加多样性
+    const topCandidatesCount = Math.max(1, Math.ceil(scoredSentences.length * 0.3))
+    const topCandidates = scoredSentences.slice(0, topCandidatesCount)
+    
+    // 打乱顺序
+    for (let i = topCandidates.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[topCandidates[i], topCandidates[j]] = [topCandidates[j], topCandidates[i]]
+    }
+
+    // 返回重新排序的句子列表
+    const remainingCandidates = scoredSentences.slice(topCandidatesCount)
+    return [
+      ...topCandidates.map(item => item.sentence),
+      ...remainingCandidates.map(item => item.sentence)
+    ]
   }
 
   /**
