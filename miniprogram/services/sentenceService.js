@@ -4,6 +4,7 @@
  */
 
 const security = require('./security.js')
+const { logger } = require('./logService.js')
 
 class SentenceService {
   constructor() {
@@ -29,7 +30,7 @@ class SentenceService {
    */
   async loadAllSentences() {
     try {
-      console.log('📚 开始加载语料库...')
+      logger.info('SENTENCE', '语料库加载开始')
       
       // 直接使用内置数据确保稳定性
       const beginnerData = this.getBeginnerSentences()
@@ -39,15 +40,15 @@ class SentenceService {
       // 合并所有句子
       this.sentences = [...beginnerData, ...intermediateData, ...advancedData]
       
-      console.log(`✅ 语料库加载完成: ${this.sentences.length} 句`)
-      console.log(`📊 语料库统计: ${beginnerData.length} 条初级，${intermediateData.length} 条中级，${advancedData.length} 条高级`)
+      logger.info('SENTENCE', `语料库加载完成: ${this.sentences.length} 句`)
+      logger.debug('SENTENCE', `语料库统计: ${beginnerData.length} 条初级，${intermediateData.length} 条中级，${advancedData.length} 条高级`)
       
       return this.sentences
     } catch (error) {
-      console.error('❌ 语料库加载失败:', error)
+      logger.error('SENTENCE', '语料库加载失败:', error)
       // 返回最小备用数据
       this.sentences = this.getBackupSentences()
-      console.log('🔄 已切换到最小备用语料库')
+      logger.warn('SENTENCE', '已切换到最小备用语料库')
       return this.sentences
     }
   }
@@ -69,15 +70,15 @@ class SentenceService {
         success: (res) => {
           try {
             const data = JSON.parse(res.data)
-            console.log(`✅ ${level}语料库加载成功: ${data.length} 句`)
+            logger.debug('SENTENCE', `${level}语料库文件加载成功: ${data.length} 句`)
             resolve(data)
           } catch (parseError) {
-            console.error(`❌ ${level}语料库JSON解析失败:`, parseError)
+            logger.error('SENTENCE', `${level}语料库JSON解析失败:`, parseError)
             reject(parseError)
           }
         },
         fail: (error) => {
-          console.error(`❌ ${level}语料库文件读取失败:`, error)
+          logger.warn('SENTENCE', `${level}语料库文件读取失败，使用备用方法:`, error.message)
           // 尝试备用方法：直接导入数据
           this.loadSentenceDataFallback(level)
             .then(resolve)
@@ -92,7 +93,7 @@ class SentenceService {
    * @param {string} level 语料库级别
    */
   async loadSentenceDataFallback(level) {
-    console.log(`🔄 使用备用方法加载${level}语料库`)
+    logger.debug('SENTENCE', `使用备用方法加载${level}语料库`)
     
     if (level === 'beginner') {
       return this.getBeginnerSentences()
@@ -527,7 +528,7 @@ class SentenceService {
     }
     
     this.userPreferences = preferences
-    console.log('👤 用户偏好加载:', preferences)
+    logger.debug('SENTENCE', '用户偏好加载完成')
   }
 
   /**
@@ -536,7 +537,7 @@ class SentenceService {
   loadPracticeHistory() {
     const history = security.secureGet('practice_history') || []
     this.practiceHistory = history
-    console.log(`📈 练习历史加载: ${history.length} 条记录`)
+    logger.debug('SENTENCE', `练习历史加载: ${history.length} 条记录`)
   }
 
   /**
@@ -626,7 +627,7 @@ class SentenceService {
       recommended = this.sentences[0]
     }
     
-    console.log(`🎯 推荐句子: [${recommended.level}] ${recommended.content}`)
+    logger.debug('SENTENCE', `推荐句子: [${recommended.level}] ${recommended.content}`)
     return recommended
   }
 
@@ -826,7 +827,7 @@ class SentenceService {
     // 安全存储
     security.secureStorage('practice_history', this.practiceHistory)
     
-    console.log('📝 练习记录已保存:', record)
+    logger.info('SENTENCE', '练习记录已保存')
   }
 
   /**
@@ -841,7 +842,7 @@ class SentenceService {
     }
 
     security.secureStorage('user_preferences', this.userPreferences)
-    console.log('⚙️ 用户偏好已更新:', this.userPreferences)
+    logger.info('SENTENCE', '用户偏好已更新')
   }
 
   /**
@@ -913,7 +914,7 @@ class SentenceService {
   resetPracticeHistory() {
     this.practiceHistory = []
     security.secureStorage('practice_history', [])
-    console.log('🔄 练习历史已重置')
+    logger.info('SENTENCE', '练习历史已重置')
   }
 
   /**
