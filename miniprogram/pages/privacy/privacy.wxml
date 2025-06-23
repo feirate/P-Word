@@ -1,1 +1,118 @@
- 
+<view class="privacy-container">
+  <view class="header">
+    <text class="title">P-Word 隐私政策</text>
+    <text class="update-date">更新日期：2025年6月22日</text>
+  </view>
+
+  <scroll-view class="content" scroll-y="true">
+    <view class="section">
+      <text class="section-title">1. 信息收集和使用</text>
+      <text class="section-content">
+        P-Word英语口语练习小程序致力于保护您的隐私。我们仅收集为提供服务所必需的信息：
+
+        • 练习记录：您的口语练习历史和统计数据
+        • 设备信息：设备型号、操作系统版本（用于性能优化）
+        • 使用数据：应用使用统计（用于改进用户体验）
+      </text>
+    </view>
+
+    <view class="section">
+      <text class="section-title">2. 录音权限说明</text>
+      <text class="section-content">
+        • 录音功能仅用于英语口语练习
+        • 所有录音数据仅在您的设备本地处理
+        • 我们不会收集、存储或上传任何录音内容
+        • 录音数据不会被传输到任何服务器
+        • 您可以随时在设置中关闭录音功能
+      </text>
+    </view>
+
+    <view class="section">
+      <text class="section-title">3. 数据存储</text>
+      <text class="section-content">
+        • 练习数据仅存储在您的设备本地
+        • 使用微信小程序本地存储功能保存数据
+        • 所有本地数据经过加密处理
+        • 卸载小程序将清除所有本地数据
+      </text>
+    </view>
+
+    <view class="section">
+      <text class="section-title">4. 数据安全</text>
+      <text class="section-content">
+        • 采用行业标准的加密技术保护数据
+        • 本地数据加密存储，防止未授权访问
+        • 定期更新安全措施以应对新的威胁
+        • 不与第三方分享任何个人信息
+      </text>
+    </view>
+
+    <view class="section">
+      <text class="section-title">5. 儿童隐私保护</text>
+      <text class="section-content">
+        • 我们特别重视保护儿童的隐私安全
+        • 不会主动收集13岁以下儿童的个人信息
+        • 如发现收集了儿童信息，会立即删除
+        • 建议儿童在家长指导下使用本应用
+      </text>
+    </view>
+
+    <view class="section">
+      <text class="section-title">6. 权限使用说明</text>
+      <text class="section-content">
+        本小程序申请的权限及用途：
+
+        • 录音权限：用于英语口语练习，录音数据仅本地处理
+        • 存储权限：保存练习记录和应用设置
+        • 网络权限：获取语料库更新（可选）
+      </text>
+    </view>
+
+    <view class="section">
+      <text class="section-title">7. 您的权利</text>
+      <text class="section-content">
+        您对自己的数据享有以下权利：
+
+        • 查看权：随时查看已存储的练习数据
+        • 删除权：在设置中清除所有练习记录
+        • 控制权：关闭或开启各项功能权限
+        • 知情权：了解数据如何被使用和保护
+      </text>
+    </view>
+
+    <view class="section">
+      <text class="section-title">8. 政策更新</text>
+      <text class="section-content">
+        • 我们可能会不定期更新本隐私政策
+        • 重大变更会在小程序内显著提示
+        • 建议定期查看最新版本的隐私政策
+        • 继续使用服务即表示同意更新后的政策
+      </text>
+    </view>
+
+    <view class="section">
+      <text class="section-title">9. 联系我们</text>
+      <text class="section-content">
+        如果您对本隐私政策有任何疑问或建议，请通过以下方式联系我们：
+
+        • 小程序内反馈功能
+        • 微信公众号留言
+        • 邮箱：privacy@p-word.app
+
+        我们会在7个工作日内回复您的询问。
+      </text>
+    </view>
+
+    <view class="footer">
+      <text class="footer-text">
+        本隐私政策自2025年6月22日起生效。
+        P-Word团队保留对本政策的最终解释权。
+      </text>
+    </view>
+  </scroll-view>
+
+  <view class="action-buttons">
+    <button class="btn-secondary" bindtap="goBack">返回</button>
+    <button class="btn-primary" bindtap="acceptPolicy">我已阅读并同意</button>
+  </view>
+</view> 

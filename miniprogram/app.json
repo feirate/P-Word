@@ -38,11 +38,13 @@
       }
     ]
   },
-  "requiredPrivateInfos": [
-    "getLocation",
-    "chooseLocation"
-  ],
-  "requiredBackgroundModes": ["audio"],
+  "permission": {
+    "scope.record": {
+      "desc": "录音功能用于英语口语练习，帮助您提升发音水平。录音数据仅在本地处理，不会上传到服务器。"
+    }
+  },
+  "requiredBackgroundModes": [],
   "sitemapLocation": "sitemap.json",
-  "style": "v2"
+  "style": "v2",
+  "lazyCodeLoading": "requiredComponents"
 } 
