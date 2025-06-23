@@ -46,6 +46,8 @@ env.js
 .env.local
 .env.production
 project.private.config.json
+# 微信小程序配置文件（包含AppID等敏感信息）
+project.config.json
 # 真实AppID配置文件（如果使用）
 appid.config.js
 

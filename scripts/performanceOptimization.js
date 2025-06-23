@@ -336,7 +336,8 @@ class CanvasPerformanceOptimizer {
   
   getOptimalFPS() {
     // 根据设备性能动态调整帧率
-    const devicePixelRatio = wx.getDeviceInfo?.()?.pixelRatio || 2
+    const deviceInfo = (wx.getDeviceInfo && wx.getDeviceInfo()) || {}
+    const devicePixelRatio = deviceInfo.pixelRatio || 2
     const isHighPerformance = devicePixelRatio <= 2
     return isHighPerformance ? 30 : 20
   }
@@ -486,46 +487,4 @@ class PerformanceMonitor {
     // 监听应用启动完成事件
     wx.onAppShow(() => {
       this.metrics.startupTime = Date.now() - startTime
-      console.log(\`📊 启动时间: \${this.metrics.startupTime}ms\`)
-    })
-  }
-  
-  monitorRenderPerformance() {
-    const originalDrawFunction = this.drawWaveform
-    
-    this.drawWaveform = (...args) => {
-      const start = performance.now()
-      const result = originalDrawFunction.apply(this, args)
-      const renderTime = performance.now() - start
-      
-      this.metrics.renderTime.push(renderTime)
-      if (this.metrics.renderTime.length > 60) {
-        this.metrics.renderTime.shift() // 保持最近60帧数据
-      }
-      
-      return result
-    }
-  }
-  
-  generatePerformanceReport() {
-    const avgRenderTime = this.metrics.renderTime.reduce((a, b) => a + b, 0) / this.metrics.renderTime.length
-    
-    return {
-      startupTime: this.metrics.startupTime,
-      avgRenderTime: avgRenderTime.toFixed(2),
-      fps: (1000 / avgRenderTime).toFixed(1),
-      memoryUsage: this.getCurrentMemoryUsage(),
-      errorCount: this.metrics.errorCount
-    }
-  }
-}`;
-  }
-}
-
-// 运行性能优化分析
-if (typeof module !== 'undefined' && require.main === module) {
-  const optimizer = new PerformanceOptimizer()
-  optimizer.runPerformanceAnalysis()
-}
-
-module.exports = PerformanceOptimizer 
+      console.log(\`

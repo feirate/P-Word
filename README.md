@@ -55,6 +55,30 @@ P-Word/
 - **调试友好**：集成MCP调试工具，提升开发效率
 - **规范化管理**：采用Google开发规范组织项目结构
 
+## ⚙️ 开发环境配置
+
+### 首次使用配置
+
+1. **克隆项目**
+   ```bash
+   git clone [repository-url]
+   cd P-Word
+   ```
+
+2. **配置微信小程序AppID**
+   ```bash
+   # 复制配置模板
+   cp project.config.json.template project.config.json
+   
+   # 编辑配置文件，将YOUR_APPID_HERE替换为您的真实AppID
+   nano project.config.json
+   ```
+
+3. **安全说明**
+   - ⚠️ **重要**：`project.config.json` 包含敏感的AppID信息，已加入.gitignore
+   - ✅ 模板文件：`project.config.json.template` 可安全提交到Git
+   - 🔒 团队开发时，每个开发者需要配置自己的AppID
+
 ## 📖 快速开始
 
 详细的启动和开发指南请参见：

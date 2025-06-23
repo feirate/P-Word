@@ -955,7 +955,8 @@ Page({
     }
     
     // 设置画布尺寸
-    const dpr = wx.getDeviceInfo?.()?.pixelRatio || 2
+    const deviceInfo = (wx.getDeviceInfo && wx.getDeviceInfo()) || {}
+    const dpr = deviceInfo.pixelRatio || 2
     canvas.width = canvasWidth * dpr
     canvas.height = canvasHeight * dpr
     ctx.scale(dpr, dpr)
@@ -1016,7 +1017,8 @@ Page({
     }
     
     // 设置画布尺寸
-    const dpr = wx.getDeviceInfo?.()?.pixelRatio || 2
+    const deviceInfo = (wx.getDeviceInfo && wx.getDeviceInfo()) || {}
+    const dpr = deviceInfo.pixelRatio || 2
     canvas.width = canvasWidth * dpr
     canvas.height = canvasHeight * dpr
     ctx.scale(dpr, dpr)

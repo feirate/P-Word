@@ -30,7 +30,7 @@
   },
   "compileType": "miniprogram",
   "libVersion": "2.32.3",
-  "appid": "wx41c7dedc61b62988",
+  "appid": "YOUR_APPID_HERE",
   "projectname": "P-Word英语口语练习",
   "miniprogramRoot": "miniprogram/",
   "debugOptions": {
@@ -58,4 +58,4 @@
       "list": []
     }
   }
-}
+} 

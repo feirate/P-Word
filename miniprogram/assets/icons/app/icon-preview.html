@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P-Word 小程序头像预览 - 左右布局版</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #4A90E2;
+            margin-bottom: 30px;
+        }
+        .icon-preview {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .main-icon-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+        .saveable-image {
+            border: 2px solid #4A90E2;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .svg-source {
+            opacity: 0.7;
+        }
+        .icon-sizes {
+            display: flex;
+            justify-content: space-around;
+            margin: 30px 0;
+        }
+        .size-demo {
+            text-align: center;
+        }
+        .size-demo svg {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        button {
+            background: #4A90E2;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px;
+        }
+        button:hover {
+            background: #357ABD;
+        }
+        .instructions {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .features {
+            background: #e8f4fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .features ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        .download-hint {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 6px;
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 14px;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 P-Word 小程序头像 - 左右布局版</h1>
+        
+        <div class="icon-preview">
+            <div class="main-icon-container">
+                <!-- 可保存的PNG图片 -->
+                <div>
+                    <h4>📥 右键保存此图片 (推荐)</h4>
+                    <img id="saveableIcon" class="saveable-image" width="144" height="144" alt="P-Word 小程序头像" />
+                    <div class="download-hint">
+                        💡 右键点击上方图片 → 选择"另存为图片"或"保存图片"
+                    </div>
+                </div>
+                
+                <!-- SVG源码预览 -->
+                <div>
+                    <h4>🔧 SVG源码预览</h4>
+                    <svg id="sourceSVG" class="svg-source" width="144" height="144" viewBox="0 0 144 144" xmlns="http://www.w3.org/2000/svg">
+                      <defs>
+                        <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" style="stop-color:#4A90E2;stop-opacity:1" />
+                          <stop offset="100%" style="stop-color:#357ABD;stop-opacity:1" />
+                        </linearGradient>
+                        <linearGradient id="letterGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:1" />
+                          <stop offset="100%" style="stop-color:#F0F8FF;stop-opacity:1" />
+                        </linearGradient>
+                      </defs>
+                      
+                      <rect width="144" height="144" rx="28" ry="28" fill="url(#bgGradient)"/>
+                      
+                      <g transform="translate(20, 32)">
+                        <rect x="0" y="0" width="12" height="80" fill="url(#letterGradient)" rx="3"/>
+                        <rect x="0" y="0" width="42" height="12" fill="url(#letterGradient)" rx="3"/>
+                        <rect x="0" y="24" width="38" height="12" fill="url(#letterGradient)" rx="3"/>
+                        <rect x="30" y="0" width="12" height="36" fill="url(#letterGradient)" rx="3"/>
+                      </g>
+                      
+                      <g transform="translate(102, 112)">
+                        <text x="-28" y="0" font-family="Arial, sans-serif" font-size="20" font-weight="bold" 
+                              fill="white" opacity="0.95" text-anchor="middle">Word</text>
+                      </g>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <div class="features">
+            <h3>🎯 左右布局设计特点：</h3>
+            <ul>
+                <li><strong>蓝色渐变背景</strong> - 保持专业性和可信度</li>
+                <li><strong>左侧"P"字母</strong> - 上下居中，品牌标识突出</li>
+                <li><strong>右侧"Word"文字</strong> - 上下居中，功能定位明确</li>
+                <li><strong>底部对齐</strong> - P和Word底部对齐，视觉平衡</li>
+                <li><strong>简洁布局</strong> - 左右分布，空间利用合理</li>
+                <li><strong>专业形象</strong> - 符合现代教育类应用设计趋势</li>
+            </ul>
+        </div>
+
+        <div class="icon-sizes">
+            <div class="size-demo">
+                <h4>原始尺寸 (144px)</h4>
+                <svg width="144" height="144" viewBox="0 0 144 144" xmlns="http://www.w3.org/2000/svg">
+                  <defs>
+                    <linearGradient id="bgGradient2" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" style="stop-color:#4A90E2;stop-opacity:1" />
+                      <stop offset="100%" style="stop-color:#357ABD;stop-opacity:1" />
+                    </linearGradient>
+                    <linearGradient id="letterGradient2" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:1" />
+                      <stop offset="100%" style="stop-color:#F0F8FF;stop-opacity:1" />
+                    </linearGradient>
+                  </defs>
+                  <rect width="144" height="144" rx="28" ry="28" fill="url(#bgGradient2)"/>
+                  <g transform="translate(20, 32)">
+                    <rect x="0" y="0" width="12" height="80" fill="url(#letterGradient2)" rx="3"/>
+                    <rect x="0" y="0" width="42" height="12" fill="url(#letterGradient2)" rx="3"/>
+                    <rect x="0" y="24" width="38" height="12" fill="url(#letterGradient2)" rx="3"/>
+                    <rect x="30" y="0" width="12" height="36" fill="url(#letterGradient2)" rx="3"/>
+                  </g>
+                  <g transform="translate(102, 112)">
+                    <text x="-28" y="0" font-family="Arial, sans-serif" font-size="20" font-weight="bold" 
+                          fill="white" opacity="0.95" text-anchor="middle">Word</text>
+                  </g>
+                </svg>
+            </div>
+            
+            <div class="size-demo">
+                <h4>小尺寸预览 (64px)</h4>
+                <svg width="64" height="64" viewBox="0 0 144 144" xmlns="http://www.w3.org/2000/svg">
+                  <defs>
+                    <linearGradient id="bgGradient3" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" style="stop-color:#4A90E2;stop-opacity:1" />
+                      <stop offset="100%" style="stop-color:#357ABD;stop-opacity:1" />
+                    </linearGradient>
+                    <linearGradient id="letterGradient3" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:1" />
+                      <stop offset="100%" style="stop-color:#F0F8FF;stop-opacity:1" />
+                    </linearGradient>
+                  </defs>
+                  <rect width="144" height="144" rx="28" ry="28" fill="url(#bgGradient3)"/>
+                  <g transform="translate(20, 32)">
+                    <rect x="0" y="0" width="12" height="80" fill="url(#letterGradient3)" rx="3"/>
+                    <rect x="0" y="0" width="42" height="12" fill="url(#letterGradient3)" rx="3"/>
+                    <rect x="0" y="24" width="38" height="12" fill="url(#letterGradient3)" rx="3"/>
+                    <rect x="30" y="0" width="12" height="36" fill="url(#letterGradient3)" rx="3"/>
+                  </g>
+                  <g transform="translate(102, 112)">
+                    <text x="-28" y="0" font-family="Arial, sans-serif" font-size="20" font-weight="bold" 
+                          fill="white" opacity="0.95" text-anchor="middle">Word</text>
+                  </g>
+                </svg>
+            </div>
+        </div>
+
+        <div class="instructions">
+            <h3>📋 使用说明：</h3>
+            <p><strong>方法1 - 右键保存（已修复）:</strong></p>
+            <ol>
+                <li>右键点击上方带边框的头像图片</li>
+                <li>选择"另存为图片"或"保存图片"</li>
+                <li>文件会自动保存为PNG格式</li>
+                <li>重命名为合适的文件名（如：p-word-icon.png）</li>
+            </ol>
+            
+            <p><strong>方法2 - 一键下载:</strong></p>
+            <ol>
+                <li>点击下方"下载PNG图片"按钮</li>
+                <li>文件会自动下载到默认下载目录</li>
+                <li>文件名为：p-word-app-icon.png</li>
+            </ol>
+            
+            <p><strong>方法3 - 在线转换:</strong></p>
+            <ol>
+                <li>使用SVG转PNG在线工具</li>
+                <li>上传项目中的app-icon.svg文件</li>
+                <li>设置输出尺寸为144x144像素</li>
+                <li>下载生成的PNG文件</li>
+            </ol>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px;">
+            <button onclick="downloadPNG()">📥 下载PNG图片</button>
+            <button onclick="downloadSVG()">📄 下载SVG文件</button>
+            <button onclick="window.print()">🖨️ 打印预览</button>
+        </div>
+    </div>
+
+    <!-- 隐藏的Canvas元素用于SVG转PNG -->
+    <canvas id="hiddenCanvas" width="144" height="144" style="display: none;"></canvas>
+
+    <script>
+        // 页面加载时自动转换SVG为PNG
+        window.addEventListener('DOMContentLoaded', function() {
+            convertSVGToPNG();
+        });
+
+        function convertSVGToPNG() {
+            const svg = document.getElementById('sourceSVG');
+            const canvas = document.getElementById('hiddenCanvas');
+            const ctx = canvas.getContext('2d');
+            const img = document.getElementById('saveableIcon');
+
+            // 获取SVG数据
+            const svgData = new XMLSerializer().serializeToString(svg);
+            const svgBlob = new Blob([svgData], {type: 'image/svg+xml;charset=utf-8'});
+            const svgUrl = URL.createObjectURL(svgBlob);
+
+            // 创建图片对象
+            const tempImg = new Image();
+            tempImg.onload = function() {
+                // 清空canvas
+                ctx.clearRect(0, 0, 144, 144);
+                
+                // 绘制SVG到canvas
+                ctx.drawImage(tempImg, 0, 0, 144, 144);
+                
+                // 转换为PNG数据URL
+                const pngDataUrl = canvas.toDataURL('image/png');
+                
+                // 设置到img元素，使其可以右键保存
+                img.src = pngDataUrl;
+                
+                // 清理URL
+                URL.revokeObjectURL(svgUrl);
+            };
+            
+            tempImg.src = svgUrl;
+        }
+
+        function downloadPNG() {
+            const canvas = document.getElementById('hiddenCanvas');
+            const link = document.createElement('a');
+            link.download = 'p-word-app-icon.png';
+            link.href = canvas.toDataURL('image/png');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function downloadSVG() {
+            const svgContent = `<?xml version="1.0" encoding="UTF-8"?>
+<svg width="144" height="144" viewBox="0 0 144 144" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4A90E2;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#357ABD;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="letterGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#F0F8FF;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="144" height="144" rx="28" ry="28" fill="url(#bgGradient)"/>
+  <g transform="translate(20, 32)">
+    <rect x="0" y="0" width="12" height="80" fill="url(#letterGradient)" rx="3"/>
+    <rect x="0" y="0" width="42" height="12" fill="url(#letterGradient)" rx="3"/>
+    <rect x="0" y="24" width="38" height="12" fill="url(#letterGradient)" rx="3"/>
+    <rect x="30" y="0" width="12" height="36" fill="url(#letterGradient)" rx="3"/>
+  </g>
+  <g transform="translate(102, 112)">
+    <text x="-28" y="0" font-family="Arial, sans-serif" font-size="20" font-weight="bold" 
+          fill="white" opacity="0.95" text-anchor="middle">Word</text>
+  </g>
+</svg>`;
+            
+            const blob = new Blob([svgContent], { type: 'image/svg+xml' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'p-word-app-icon-leftright.svg';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html> 

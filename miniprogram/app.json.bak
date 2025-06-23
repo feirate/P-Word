@@ -4,7 +4,6 @@
     "pages/history/history",
     "pages/library/library",
     "pages/settings/settings",
-    "pages/privacy/privacy",
     "pages/demo/demo"
   ],
   "window": {
@@ -39,7 +38,9 @@
       }
     ]
   },
+  "requiredPrivateInfos": [],
+  "requiredBackgroundModes": [],
   "sitemapLocation": "sitemap.json",
   "style": "v2",
   "lazyCodeLoading": "requiredComponents"
-}
+} 
