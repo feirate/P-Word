@@ -1,17 +1,26 @@
 {
-  "description": "项目配置文件",
+  "description": "P-Word英语口语练习小程序 - 专注提升英语口语能力",
   "packOptions": {
-    "ignore": [],
+    "ignore": [
+      "node_modules/**/*",
+      "scripts/**/*",
+      "docs/**/*",
+      "mcp/**/*",
+      "tools/**/*",
+      ".git/**/*",
+      ".DS_Store",
+      "*.md"
+    ],
     "include": []
   },
   "setting": {
-    "urlCheck": false,
+    "urlCheck": true,
     "es6": true,
     "enhance": true,
     "postcss": true,
     "preloadBackgroundData": false,
     "minified": true,
-    "newFeature": false,
+    "newFeature": true,
     "coverView": true,
     "nodeModules": false,
     "autoAudits": false,
@@ -20,7 +29,7 @@
     "uglifyFileName": false,
     "checkInvalidKey": true,
     "checkSiteMap": true,
-    "uploadWithSourceMap": true,
+    "uploadWithSourceMap": false,
     "compileHotReLoad": false,
     "lazyloadPlaceholderEnable": false,
     "useMultiFrameRuntime": true,
@@ -44,9 +53,9 @@
     "ignoreUploadUnusedFiles": true
   },
   "compileType": "miniprogram",
-  "libVersion": "2.19.4",
+  "libVersion": "2.32.3",
   "appid": "YOUR_APPID_HERE",
-  "projectname": "P-Word",
+  "projectname": "P-Word英语口语练习",
   "miniprogramRoot": "miniprogram/",
   "cloudfunctionRoot": "cloudfunctions/",
   "debugOptions": {
