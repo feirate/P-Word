@@ -169,4 +169,7 @@
     <!-- 底部间距 -->
     <view class="bottom-spacer"></view>
   </view>
+
+  <!-- 练习详情自定义弹窗 -->
+  <detail-modal id="detailModal" title="练习详情" />
 </view> 

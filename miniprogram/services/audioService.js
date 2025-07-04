@@ -47,7 +47,6 @@ class AudioService {
       this.recordStartTime = Date.now()
       this.frameData = []
       this.waveformBuffer = []
-      console.log('🎤 高质量录音开始')
       
       if (this.onRecordStart) {
         this.onRecordStart()
@@ -60,11 +59,6 @@ class AudioService {
       this.audioPath = res.tempFilePath
       const duration = Date.now() - this.recordStartTime
       
-      console.log('🎤 录音完成:', {
-        duration: duration + 'ms',
-        fileSize: res.fileSize,
-        path: res.tempFilePath
-      })
 
       if (this.onRecordStop) {
         this.onRecordStop({
@@ -180,7 +174,6 @@ class AudioService {
 
       // 如果已有音频上下文在播放，先停止并清理
       if (this.audioContext) {
-        console.log('🔄 检测到已有音频上下文，先清理')
         this.stopPlaying()
       }
 
@@ -195,14 +188,12 @@ class AudioService {
 
       // 绑定播放事件（使用一次性监听器避免重复触发）
       const onPlayHandler = () => {
-        console.log('▶️ 开始播放录音')
         if (this.onPlayStart) {
           this.onPlayStart()
         }
       }
 
       const onEndedHandler = () => {
-        console.log('⏹️ 播放结束')
         this.cleanupAudioContext()
         if (this.onPlayEnd) {
           this.onPlayEnd()
@@ -226,7 +217,6 @@ class AudioService {
 
       // 真机环境下添加额外的播放状态监听
       this.audioContext.onStop(() => {
-        console.log('⏹️ 播放被停止')
         this.cleanupAudioContext()
         if (this.onPlayEnd) {
           this.onPlayEnd()
@@ -274,7 +264,6 @@ class AudioService {
         
         // 销毁音频上下文
         this.audioContext.destroy()
-        console.log('🧹 音频上下文已清理')
       } catch (error) {
         console.warn('⚠️ 清理音频上下文时出错:', error)
       } finally {
@@ -373,7 +362,6 @@ class AudioService {
     this.isRecording = false
     this.recordStartTime = 0
     
-    console.log('🧹 录音服务资源已清理')
   }
 
   /**

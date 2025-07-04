@@ -39,11 +39,12 @@ Page({
     
     // 同步状态
     syncStatus: null,
-    lastSyncTime: ''
+    lastSyncTime: '',
+    sortMode: 'default'
   },
   
   onLoad() {
-    console.log('📊 历史记录页面加载')
+    this.detailModal = this.selectComponent('#detailModal');
     this.initPage()
   },
 
@@ -137,8 +138,6 @@ Page({
       
       // 应用当前筛选条件
       this.applyFilters()
-      
-      console.log(`📈 加载了 ${history.length} 条练习记录`)
       
     } catch (error) {
       console.error('❌ 加载练习历史失败:', error)
@@ -284,8 +283,6 @@ Page({
       emptyTip,
       showEmptyAction
     })
-    
-    console.log(`🔍 筛选结果: ${filtered.length}/${practiceHistory.length} 条记录`)
   },
 
   // 刷新数据
@@ -362,19 +359,42 @@ Page({
     this.applyFilters()
   },
 
-  // 查看练习详情
+  /**
+   * 查看练习详情
+   */
   viewPracticeDetail(e) {
-    const practiceId = e.currentTarget.dataset.id
-    const practice = this.data.filteredHistory.find(p => p.id === practiceId)
+    const { id } = e.currentTarget.dataset;
+    const practiceRecord = this.data.practiceHistory.find(p => p.id === id);
+
+    if (!practiceRecord) {
+      console.warn('未找到对应的练习记录:', id);
+      return;
+    }
     
-    if (!practice) return
+    // 获取句子原文
+    const sentence = sentenceService.getSentenceById(practiceRecord.sentenceId);
     
-    wx.showModal({
-      title: '练习详情',
-      content: `句子ID: ${practice.sentenceId}\n分类: ${practice.category}\n难度: ${practice.difficulty}\n质量评分: ${practice.quality}分\n练习时长: ${Math.round(practice.duration / 60)}分钟\n练习时间: ${new Date(practice.timestamp).toLocaleString()}`,
-      showCancel: false,
-      confirmText: '确定'
-    })
+    // 准备给弹窗的数据
+    const details = {
+      content: sentence ? sentence.content : '句子原文未找到',
+      category: practiceRecord.category,
+      difficultyStars: practiceRecord.difficultyStars,
+      bestQuality: practiceRecord.quality, // 在历史记录中，bestQuality就是当次的quality
+      practiceCount: 'N/A', // 历史详情不显示练习次数
+      practiceTime: new Date(practiceRecord.timestamp).toLocaleString()
+    };
+    
+    // 调用自定义弹窗
+    if (this.detailModal) {
+      this.detailModal.showModal(details);
+    } else {
+      // Fallback
+      wx.showModal({
+        title: '练习详情',
+        content: `句子: ${details.content}\n分数: ${details.bestQuality}分`,
+        showCancel: false,
+      });
+    }
   },
 
   // 删除练习记录
@@ -480,5 +500,13 @@ Page({
     wx.switchTab({
       url: '/pages/index/index'
     })
+  },
+
+  onSortModeChange(e) {
+    const nextMode = e.detail.value;
+    this.setData({
+      sortMode: nextMode
+    })
+    this.applyFilters()
   }
 }) 

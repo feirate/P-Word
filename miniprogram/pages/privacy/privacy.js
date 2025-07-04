@@ -23,7 +23,7 @@ Page({
       const { logger } = require('../../services/logService.js')
       logger.info('PRIVACY', '用户查看隐私政策')
     } catch (error) {
-      console.log('日志记录失败:', error)
+      console.error('日志记录失败:', error)
     }
   },
 
@@ -86,7 +86,8 @@ Page({
   onShareAppMessage() {
     return {
       title: 'P-Word隐私政策 - 保护您的隐私安全',
-      path: '/pages/privacy/privacy'
+      path: '/pages/privacy/privacy',
+      imageUrl: '/assets/icons/app/share-privacy.png'
     }
   },
 
@@ -96,7 +97,8 @@ Page({
   onShareTimeline() {
     return {
       title: 'P-Word隐私政策 - 透明的隐私保护承诺',
-      query: ''
+      query: '',
+      imageUrl: '/assets/icons/app/share-privacy.png'
     }
   }
 }) 

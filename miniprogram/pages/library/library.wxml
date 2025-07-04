@@ -170,21 +170,22 @@
         <!-- 操作按钮 -->
         <view class="sentence-actions">
           <view 
-            class="action-btn play-btn {{currentPlayingId === item.id && isPlaying ? 'playing' : ''}}" 
-            bindtap="playSentence" 
+            class="action-btn play-btn {{currentPlayingId === item.id ? 'playing' : ''}}" 
+            bindtap="handlePlayTTS" 
             data-id="{{item.id}}"
+            data-content="{{item.content}}"
           >
             <icon 
-              name="{{currentPlayingId === item.id && isPlaying ? 'pause' : 'play'}}" 
+              name="{{currentPlayingId === item.id ? 'pause' : 'play'}}" 
               size="16" 
-              color="#2196F3" 
+              color="{{currentPlayingId === item.id ? '#FF5722' : '#2196F3'}}"
             />
-            <text>{{currentPlayingId === item.id && isPlaying ? '停止' : '播放'}}</text>
+            <text>{{currentPlayingId === item.id ? '停止' : '播放'}}</text>
           </view>
           
           <view 
             class="action-btn practice-btn" 
-            bindtap="practiceSentence" 
+            bindtap="handleGoToPractice" 
             data-id="{{item.id}}"
           >
             <icon name="mic" size="16" color="#4CAF50" />
@@ -207,4 +208,7 @@
     <!-- 底部间距 -->
     <view class="bottom-spacer"></view>
   </view>
+
+  <!-- 练习详情自定义弹窗 -->
+  <detail-modal id="detailModal" title="练习详情" />
 </view> 

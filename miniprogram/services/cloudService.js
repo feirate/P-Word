@@ -28,8 +28,6 @@ class CloudService {
     
     // 加载同步队列
     this.loadSyncQueue()
-    
-    console.log('☁️ 云服务初始化完成')
   }
 
   /**
@@ -39,7 +37,6 @@ class CloudService {
     wx.getNetworkType({
       success: (res) => {
         this.isOnline = res.networkType !== 'none'
-        console.log(`📶 网络状态: ${this.isOnline ? '在线' : '离线'} (${res.networkType})`)
         
         // 如果网络恢复，尝试同步离线数据
         if (this.isOnline && this.syncQueue.length > 0) {
@@ -56,11 +53,9 @@ class CloudService {
     const wasOnline = this.isOnline
     this.isOnline = res.isConnected
     
-    console.log(`📶 网络状态变化: ${this.isOnline ? '已连接' : '已断开'}`)
     
     // 网络恢复时处理同步队列
     if (!wasOnline && this.isOnline && this.syncQueue.length > 0) {
-      console.log('🔄 网络恢复，开始同步离线数据...')
       this.processSyncQueue()
     }
   }
@@ -85,12 +80,10 @@ class CloudService {
       if (this.isOnline) {
         // 在线直接同步
         const result = await this.uploadToCloud(cloudRecord)
-        console.log('☁️ 练习记录已同步到云端:', result)
         return result
       } else {
         // 离线加入同步队列
         this.addToSyncQueue(cloudRecord)
-        console.log('📱 练习记录已加入离线同步队列')
         return { success: true, offline: true }
       }
     } catch (error) {
@@ -161,7 +154,6 @@ class CloudService {
       }
 
       const result = await this.queryFromCloud(query, options)
-      console.log(`☁️ 从云端下载了 ${result.data.length} 条练习记录`)
       
       return result
     } catch (error) {
@@ -259,11 +251,9 @@ class CloudService {
 
       if (this.isOnline) {
         const result = await this.uploadToCloud(cloudPreferences)
-        console.log('☁️ 用户偏好已同步到云端')
         return result
       } else {
         this.addToSyncQueue(cloudPreferences)
-        console.log('📱 用户偏好已加入离线同步队列')
         return { success: true, offline: true }
       }
     } catch (error) {
@@ -303,7 +293,6 @@ class CloudService {
     })
 
     const mergedRecords = Array.from(mergedMap.values())
-    console.log(`🔄 数据合并完成: 本地${localRecords.length}条, 云端${cloudRecords.length}条, 合并后${mergedRecords.length}条`)
     
     return mergedRecords
   }
@@ -323,7 +312,6 @@ class CloudService {
     this.syncQueue.push(queueItem)
     this.saveSyncQueue()
     
-    console.log(`📝 数据已添加到同步队列 (队列长度: ${this.syncQueue.length})`)
   }
 
   /**
@@ -334,7 +322,6 @@ class CloudService {
       return
     }
 
-    console.log(`🔄 开始处理同步队列 (${this.syncQueue.length} 项)`)
     
     const processedItems = []
     
@@ -342,7 +329,6 @@ class CloudService {
       try {
         await this.uploadToCloud(item.data)
         processedItems.push(item)
-        console.log(`✅ 同步成功: ${item.id}`)
       } catch (error) {
         item.retries++
         console.error(`❌ 同步失败 (${item.retries}/${this.maxRetries}): ${item.id}`, error)
@@ -359,7 +345,6 @@ class CloudService {
     this.syncQueue = this.syncQueue.filter(item => !processedItems.includes(item))
     this.saveSyncQueue()
     
-    console.log(`🔄 同步队列处理完成，剩余 ${this.syncQueue.length} 项`)
   }
 
   /**
@@ -368,7 +353,6 @@ class CloudService {
   loadSyncQueue() {
     const queue = security.secureGet('sync_queue') || []
     this.syncQueue = queue
-    console.log(`📂 同步队列已加载 (${queue.length} 项)`)
   }
 
   /**
@@ -384,7 +368,6 @@ class CloudService {
   clearSyncQueue() {
     this.syncQueue = []
     this.saveSyncQueue()
-    console.log('🗑️ 同步队列已清空')
   }
 
   /**
@@ -422,7 +405,6 @@ class CloudService {
         throw new Error('网络不可用，无法执行同步')
       }
 
-      console.log('🔄 开始执行完整数据同步...')
       
       // 1. 下载云端数据
       const cloudResult = await this.downloadPracticeRecords()
@@ -443,7 +425,6 @@ class CloudService {
       this.lastSyncTime = Date.now()
       wx.setStorageSync('last_sync_time', this.lastSyncTime)
       
-      console.log('✅ 完整数据同步完成')
       
       return {
         success: true,
@@ -524,7 +505,6 @@ class CloudService {
       })
     }
     
-    console.log(`⚙️ 自动同步已${enabled ? '启用' : '禁用'}`)
   }
 
   /**

@@ -7,9 +7,9 @@ class TTSService {
   constructor() {
     this.isPlaying = false;
     this.currentAudio = null;
-    this.autoPlayEnabled = true; // 是否开启自动朗读
-    this.playbackRate = 1.0;     // 播放速度
-    this.volume = 1.0;           // 音量
+    this.autoPlayEnabled = true;
+    this.playbackRate = 1.0;
+    this.volume = 1.0;
   }
 
   /**
@@ -20,10 +20,8 @@ class TTSService {
    */
   async playText(text, options = {}) {
     try {
-      // 停止当前播放
       this.stopCurrent();
 
-      // 合并配置选项
       const config = {
         lang: 'en-US',
         rate: options.rate || this.playbackRate,
@@ -32,19 +30,14 @@ class TTSService {
         ...options
       };
 
-      // 使用微信API进行语音合成
       return new Promise((resolve, reject) => {
-        // 标记开始播放
         this.isPlaying = true;
 
-        // 创建语音合成实例
         const ttsTask = wx.createInnerAudioContext();
         
-        // 使用系统TTS API（如果支持）
         if (wx.createSynthesizeEngine) {
           this.synthesizeWithEngine(text, config, resolve, reject);
         } else {
-          // 降级方案：使用在线TTS服务
           this.synthesizeWithOnlineService(text, config, resolve, reject);
         }
       });
@@ -68,12 +61,10 @@ class TTSService {
       });
 
       synthesizeEngine.onStart(() => {
-        console.log('TTS开始播放');
         this.isPlaying = true;
       });
 
       synthesizeEngine.onEnd(() => {
-        console.log('TTS播放结束');
         this.isPlaying = false;
         resolve({ success: true });
       });
@@ -84,7 +75,6 @@ class TTSService {
         reject(error);
       });
 
-      // 开始合成并播放
       synthesizeEngine.speak({
         content: text
       });
@@ -92,7 +82,6 @@ class TTSService {
       this.currentAudio = synthesizeEngine;
 
     } catch (error) {
-      console.log('语音合成引擎不支持，使用在线服务');
       this.synthesizeWithOnlineService(text, config, resolve, reject);
     }
   }
@@ -102,12 +91,6 @@ class TTSService {
    */
   synthesizeWithOnlineService(text, config, resolve, reject) {
     try {
-      // 可以接入第三方TTS服务，如：
-      // 1. 百度语音合成
-      // 2. 腾讯云语音合成
-      // 3. 阿里云语音合成
-      
-      // 这里使用浏览器内置的SpeechSynthesis（仅模拟器支持）
       if (typeof SpeechSynthesisUtterance !== 'undefined') {
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = config.lang;
@@ -132,9 +115,7 @@ class TTSService {
         this.currentAudio = utterance;
 
       } else {
-        // 最终降级：显示提示信息
         this.isPlaying = false;
-        console.log('当前环境不支持语音合成');
         resolve({ 
           success: false, 
           message: '当前环境不支持语音朗读功能' 
@@ -236,7 +217,6 @@ class TTSService {
       innerAudioContext: !!wx.createInnerAudioContext
     };
     
-    console.log('🔍 TTS环境检测结果:', checks);
     
     return !!(
       wx.createSynthesizeEngine || 
@@ -248,98 +228,104 @@ class TTSService {
    * 获取详细的TTS支持信息
    */
   getTTSSupportInfo() {
+    const wxAPI = {
+      createSynthesizeEngine: typeof wx.createSynthesizeEngine,
+      getAvailableAudioSources: typeof wx.getAvailableAudioSources,
+      createInnerAudioContext: typeof wx.createInnerAudioContext,
+    };
+
+    const browserAPI = {
+      speechSynthesis: typeof speechSynthesis,
+      SpeechSynthesisUtterance: typeof SpeechSynthesisUtterance,
+    };
+
+    const deviceInfo = wx.getDeviceInfo ? wx.getDeviceInfo() : {};
+    
+    const environment = deviceInfo.environment || (typeof window !== 'undefined' ? 'browser' : 'unknown');
+
+    return {
+      environment,
+      wxAPI,
+      browserAPI,
+      platform: deviceInfo.platform,
+      system: deviceInfo.system,
+    };
+  }
+
+  /**
+   * 显示调试面板
+   */
+  showDebugPanel() {
+    const info = this.getTTSSupportInfo();
+    wx.showModal({
+      title: 'TTS调试信息',
+      content: JSON.stringify(info, null, 2),
+      showCancel: false
+    });
+  }
+
+  /**
+   * 模拟TTS播放（用于开发者工具测试）
+   */
+  mockTTSPlayback(text, duration = 2000) {
+    return new Promise(resolve => {
+      this.isPlaying = true;
+      setTimeout(() => {
+        this.isPlaying = false;
+        resolve({ success: true, message: '模拟播放完成' });
+      }, duration);
+    });
+  }
+
+  /**
+   * 申请TTS可能需要的权限（如录音权限）
+   */
+  async requestPermissions() {
+    
     try {
-      const deviceInfo = wx.getDeviceInfo()
-      const appBaseInfo = wx.getAppBaseInfo()
-      
-      return {
-        // 微信小程序环境信息
-        environment: typeof wx !== 'undefined' ? 'miniprogram' : 'browser',
-        platform: deviceInfo.platform,
-        version: appBaseInfo.version,
-        
-        // TTS API支持检测
-        wxCreateSynthesizeEngine: typeof wx.createSynthesizeEngine === 'function',
-        
-        // Web TTS API支持检测 (降级方案)
-        speechSynthesis: typeof speechSynthesis !== 'undefined',
-        speechSynthesisUtterance: typeof SpeechSynthesisUtterance !== 'undefined',
-        
-        // 调试信息
-        timestamp: new Date().toISOString()
+      const setting = await wx.getSetting();
+      if (setting.authSetting['scope.record']) {
+        return true;
       }
+
+      await wx.authorize({ scope: 'scope.record' });
+      return true;
+
     } catch (error) {
-      console.error('❌ 获取系统信息失败:', error)
-      return {
-        environment: 'unknown',
-        platform: 'unknown',
-        version: 'unknown',
-        wxCreateSynthesizeEngine: false,
-        speechSynthesis: false,
-        speechSynthesisUtterance: false,
-        error: error.message
-      }
+      console.error('TTS权限申请失败:', error);
+      this.showPermissionGuide();
+      return false;
     }
   }
 
   /**
-   * 增强权限申请
-   */
-  async requestPermissions() {
-    console.log('🔐 开始申请TTS相关权限');
-    
-    // 申请录音权限（虽然TTS不需要，但有助于音频权限获取）
-    return new Promise((resolve) => {
-      wx.authorize({
-        scope: 'scope.record',
-        success: () => {
-          console.log('✅ 录音权限申请成功');
-          resolve(true);
-        },
-        fail: () => {
-          console.log('❌ 录音权限申请失败，显示引导');
-          this.showPermissionGuide(resolve);
-        }
-      });
-    });
-  }
-
-  /**
-   * 显示权限申请引导
+   * 显示权限引导
    */
   showPermissionGuide(callback) {
     wx.showModal({
       title: '权限申请',
-      content: 'P-Word需要音频权限来提供语音朗读功能。请在设置中手动开启权限。',
-      showCancel: true,
-      cancelText: '稍后',
+      content: '语音朗读功能需要获取您的录音权限，以确保音频功能的正常运行。',
       confirmText: '去设置',
-      success: (res) => {
+      showCancel: false,
+      success: async (res) => {
         if (res.confirm) {
-          wx.openSetting({
-            success: (settingRes) => {
-              console.log('设置页面返回:', settingRes.authSetting);
-              callback(settingRes.authSetting['scope.record']);
-            }
-          });
-        } else {
-          callback(false);
+          const settingRes = await wx.openSetting();
+          if (callback) callback(settingRes.authSetting['scope.record'] || false);
         }
       }
     });
   }
 
   /**
-   * 清理资源
+   * 销毁服务
    */
   destroy() {
     this.stopCurrent();
+    
     this.isPlaying = false;
     this.currentAudio = null;
   }
 }
 
-// 创建单例实例
 const ttsService = new TTSService();
-
 module.exports = ttsService; 

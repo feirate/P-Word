@@ -37,13 +37,11 @@ Component({
   },
 
   attached() {
-    console.log('🎨 图标组件加载，属性:', this.properties)
     this.generateSvg()
   },
 
   observers: {
     'name, color, strokeWidth': function() {
-      console.log('🔄 图标属性变化，重新生成SVG')
       this.generateSvg()
     }
   },
@@ -52,14 +50,12 @@ Component({
     // 生成SVG的base64数据
     generateSvg() {
       const { name, color, strokeWidth } = this.properties
-      console.log(`🔍 生成SVG: name=${name}, color=${color}, strokeWidth=${strokeWidth}`)
       
       const svgMap = this.getSvgMap()
       
       if (svgMap[name]) {
         const svgXml = svgMap[name](color, strokeWidth)
         const svgData = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgXml)}`
-        console.log('✅ SVG生成成功:', svgData.substring(0, 100) + '...')
         this.setData({ svgData })
       } else {
         console.warn('❌ 未找到图标:', name, '可用图标:', Object.keys(svgMap))

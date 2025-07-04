@@ -1,5 +1,6 @@
 //pages.js
 const ttsService = require('../../services/ttsService.js')
+const sentenceService = require('../../services/sentenceService.js')
 
 Page({
   data: {
@@ -34,7 +35,6 @@ Page({
   },
 
   onLoad() {
-    console.log('⚙️ 设置页面加载')
     this.loadSettings()
   },
 
@@ -81,12 +81,6 @@ Page({
         }
       })
       
-      console.log('✅ 设置加载完成:', {
-        dailyGoal,
-        goalIndex: goalIndex >= 0 ? goalIndex : 3,
-        autoPlayEnabled: autoPlayEnabled !== false
-      })
-      
     } catch (error) {
       console.error('❌ 加载设置失败:', error)
       wx.showToast({
@@ -111,8 +105,6 @@ Page({
         icon: 'success',
         duration: 1500
       })
-      
-      console.log(`⚙️ 自动朗读设置: ${enabled ? '开启' : '关闭'}`)
       
     } catch (error) {
       console.error('❌ 保存自动朗读设置失败:', error)
@@ -206,7 +198,6 @@ Page({
               duration: 2000
             })
             
-            console.log('✅ 练习数据已清除')
             
           } catch (error) {
             console.error('❌ 清除数据失败:', error)
@@ -250,7 +241,6 @@ Page({
             duration: 2000
           })
           
-          console.log('✅ 数据导出成功')
         },
         fail: (error) => {
           console.error('❌ 复制到剪贴板失败:', error)
@@ -299,7 +289,6 @@ Page({
         duration: 1500
       })
       
-      console.log(`⚙️ 每日目标设置: ${dailyGoal}句`)
       
       // 通知主页面更新目标
       const pages = getCurrentPages()
@@ -335,7 +324,6 @@ Page({
     try {
       wx.setStorageSync('ttsRate', speed)
       ttsService.setPlaybackRate && ttsService.setPlaybackRate(speed)
-      console.log(`⚙️ TTS速度设置: ${speed}x`)
     } catch (error) {
       console.error('❌ 保存TTS速度失败:', error)
     }
@@ -351,7 +339,6 @@ Page({
     try {
       wx.setStorageSync('ttsPitch', pitch)
       ttsService.setPitch && ttsService.setPitch(pitch)
-      console.log(`⚙️ TTS音调设置: ${pitch}`)
     } catch (error) {
       console.error('❌ 保存TTS音调失败:', error)
     }
@@ -368,7 +355,6 @@ Page({
     try {
       wx.setStorageSync('ttsVolume', volume)
       ttsService.setVolume && ttsService.setVolume(volume)
-      console.log(`⚙️ TTS音量设置: ${Math.round(volume * 100)}%`)
     } catch (error) {
       console.error('❌ 保存TTS音量失败:', error)
     }
@@ -391,7 +377,6 @@ Page({
         duration: 1500
       })
       
-      console.log(`⚙️ 智能推荐设置: ${enabled ? '开启' : '关闭'}`)
     } catch (error) {
       console.error('❌ 保存智能推荐设置失败:', error)
       this.setData({ 'practiceSettings.smartRecommend': !enabled })
@@ -414,7 +399,6 @@ Page({
         duration: 1500
       })
       
-      console.log(`⚙️ 避免重复设置: ${enabled ? '开启' : '关闭'}`)
     } catch (error) {
       console.error('❌ 保存避免重复设置失败:', error)
       this.setData({ 'practiceSettings.avoidRepeats': !enabled })
@@ -450,7 +434,6 @@ Page({
               duration: 2000
             })
             
-            console.log('✅ 练习历史已清除')
             
           } catch (error) {
             console.error('❌ 清除历史失败:', error)
@@ -493,6 +476,9 @@ Page({
               }
             })
             
+            // 重置语料库服务中的今日统计数据
+            sentenceService.resetTodayStats()
+
             // 重新加载默认设置
             this.setData({
               autoPlayEnabled: true,
@@ -519,7 +505,7 @@ Page({
               duration: 2000
             })
             
-            console.log('✅ 所有设置已重置')
+            console.warn('✅ 所有设置已重置')
             
           } catch (error) {
             console.error('❌ 重置设置失败:', error)
@@ -554,6 +540,5 @@ Page({
   },
 
   onUnload() {
-    console.log('⚙️ 设置页面卸载')
   }
 }) 

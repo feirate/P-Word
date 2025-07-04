@@ -2,6 +2,7 @@
 const sentenceService = require('../../services/sentenceService.js')
 const ttsService = require('../../services/ttsService.js')
 const security = require('../../services/security.js')
+const logService = require('../../services/logService.js')
 
 Page({
   data: {
@@ -29,60 +30,55 @@ Page({
     
     // 播放状态
     currentPlayingId: null,
-    isPlaying: false
+    isPlaying: false,
+
+    categories: [],
+    levels: []
   },
   
-  onLoad() {
-    console.log('📚 语料库页面加载')
+  onLoad(options) {
+    this.detailModal = this.selectComponent('#detailModal');
     this.initPage()
   },
 
   onShow() {
     // 页面显示时刷新统计数据
-    this.loadStatistics()
+    this.loadStatistics();
     
-    // 添加调试信息
-    console.log('📚 语料库页面显示，当前数据状态:', {
-      allSentencesCount: this.data.allSentences.length,
-      filteredSentencesCount: this.data.filteredSentences.length,
-      selectedCategory: this.data.selectedCategory,
-      selectedDifficulty: this.data.selectedDifficulty,
-      isLoading: this.data.isLoading,
-      firstSentence: this.data.filteredSentences[0] ? {
-        id: this.data.filteredSentences[0].id,
-        content: this.data.filteredSentences[0].content
-      } : 'NO_SENTENCES'
-    })
-    
-    // 如果没有句子数据，尝试重新加载
-    if (this.data.allSentences.length === 0 && !this.data.isLoading) {
-      console.warn('⚠️ 检测到没有句子数据，重新初始化')
-      this.initPage()
+    // onShow时只应用筛选，不重新加载数据，避免闪烁
+    if (this.data.allSentences.length > 0) {
+      this.applyFilters();
     }
+  },
+
+  // 增加下拉刷新处理
+  onPullDownRefresh() {
+    this.initPage().then(() => {
+      wx.stopPullDownRefresh();
+      wx.showToast({
+        title: '刷新成功',
+        icon: 'success',
+        duration: 1500
+      });
+    });
   },
 
   // 初始化页面
   async initPage() {
+    this.setData({ isLoading: true });
+
     try {
-      // 加载句子数据
-      await this.loadSentences()
-      
-      // 加载分类数据
-      this.loadCategories()
-      
-      // 加载统计信息
-      this.loadStatistics()
-      
-      this.setData({ isLoading: false })
-      
+      await this.loadSentences();
+      // 成功后再加载依赖句子的部分
+      this.loadCategoriesAndLevels(); // 移到句子加载后，确保有数据
+      this.loadStatistics();
+      this.applyFilters();
     } catch (error) {
-      console.error('❌ 语料库页面初始化失败:', error)
-      this.setData({ isLoading: false })
-      
-      wx.showToast({
-        title: '加载失败',
-        icon: 'none'
-      })
+      // 加载失败时，不再弹出toast，允许用户通过下拉刷新重试
+      // 可以在这里设置一个错误状态，用于在UI上显示提示
+      console.error('页面初始化失败:', error);
+    } finally {
+      this.setData({ isLoading: false });
     }
   },
 
@@ -92,13 +88,12 @@ Page({
       // 确保sentenceService已初始化
       await sentenceService.initService()
       
-      const sentences = sentenceService.getAllSentences()
+      let sentences = sentenceService.getAllSentences()
       
       if (!sentences || sentences.length === 0) {
-        console.warn('⚠️ 未获取到句子数据，尝试重新加载')
         await sentenceService.loadAllSentences()
-        const retryedSentences = sentenceService.getAllSentences()
-        if (!retryedSentences || retryedSentences.length === 0) {
+        sentences = sentenceService.getAllSentences()
+        if (!sentences || sentences.length === 0) {
           throw new Error('无法加载语料库数据')
         }
       }
@@ -121,17 +116,9 @@ Page({
         filteredSentences: enrichedSentences
       })
       
-      console.log(`📚 加载了 ${sentences.length} 个句子`)
-      
     } catch (error) {
-      console.error('❌ 加载句子数据失败:', error)
-      
-      // 显示用户友好的错误提示
-      wx.showToast({
-        title: '语料库加载失败',
-        icon: 'none',
-        duration: 2000
-      })
+      console.error('语料库加载失败:', error)
+      throw error // 重新抛出错误，让上级函数处理
     }
   },
 
@@ -142,10 +129,19 @@ Page({
     return Math.max(...practices.map(p => p.quality || 0))
   },
 
-  // 加载分类数据
-  loadCategories() {
+  // 加载分类和难度数据
+  loadCategoriesAndLevels() {
     const categories = sentenceService.getAllCategories()
-    this.setData({ availableCategories: categories })
+    // 根据现有句子数据获取所有难度级别
+    const allSentences = sentenceService.getAllSentences()
+    const difficulties = [...new Set(allSentences.map(s => s.difficulty))].sort()
+    const levels = difficulties.map(d => `难度${d}`)
+
+    this.setData({
+      categories: ['全部', ...categories],
+      levels: ['全部', ...levels],
+      availableCategories: categories // 设置可用分类，用于WXML中的循环
+    })
   },
 
   // 加载统计信息
@@ -175,11 +171,10 @@ Page({
   // 分类筛选
   onCategoryChange(e) {
     const category = e.currentTarget.dataset.category || ''
-    
-    this.setData({ selectedCategory: category })
+    this.setData({
+      selectedCategory: category
+    })
     this.applyFilters()
-    
-    console.log(`📂 选择分类: ${category || '全部'}`)
   },
 
   // 难度筛选
@@ -188,8 +183,6 @@ Page({
     
     this.setData({ selectedDifficulty: difficulty })
     this.applyFilters()
-    
-    console.log(`⭐ 选择难度: ${difficulty || '全部'}`)
   },
 
   // 搜索功能
@@ -226,34 +219,34 @@ Page({
 
   // 应用筛选条件
   applyFilters() {
-    let filtered = [...this.data.allSentences]
-    
-    // 分类筛选
-    if (this.data.selectedCategory) {
-      filtered = filtered.filter(s => s.category === this.data.selectedCategory)
+    let sentences = this.data.allSentences;
+    const { selectedCategory, selectedDifficulty, searchKeyword } = this.data;
+
+    // 1. 分类筛选
+    if (selectedCategory) {
+      sentences = sentences.filter(s => s.category === selectedCategory);
     }
     
-    // 难度筛选
-    if (this.data.selectedDifficulty > 0) {
-      filtered = filtered.filter(s => s.difficulty === this.data.selectedDifficulty)
+    // 2. 难度筛选
+    if (selectedDifficulty > 0) {
+      sentences = sentences.filter(s => s.difficulty === selectedDifficulty);
     }
-    
-    // 搜索筛选
-    if (this.data.searchKeyword) {
-      const keyword = this.data.searchKeyword.toLowerCase()
-      filtered = filtered.filter(s => 
+
+    // 3. 关键词搜索
+    if (searchKeyword) {
+      const keyword = searchKeyword.toLowerCase();
+      sentences = sentences.filter(s =>
         s.content.toLowerCase().includes(keyword) ||
-        s.translation.toLowerCase().includes(keyword) ||
-        s.category.toLowerCase().includes(keyword)
-      )
+        (s.translation && s.translation.toLowerCase().includes(keyword))
+      );
     }
     
-    // 排序
-    this.sortSentences(filtered)
-    
-    this.setData({ filteredSentences: filtered })
-    
-    console.log(`🔍 筛选结果: ${filtered.length} 个句子`)
+    // 4. 排序
+    this.sortSentences(sentences);
+
+    this.setData({
+      filteredSentences: sentences
+    });
   },
 
   // 句子排序
@@ -282,173 +275,95 @@ Page({
     }
   },
 
-  // 播放句子
-  async playSentence(e) {
-    // 立即提供视觉反馈
-    wx.showToast({
-      title: '正在播放...',
-      icon: 'loading',
-      duration: 500
-    })
-    
-    console.log('🔊 playSentence 被调用:', e)
-    
-    const sentenceId = e.currentTarget.dataset.id
-    const sentence = this.data.filteredSentences.find(s => s.id === sentenceId)
-    
-    console.log('🔊 播放参数:', {
-      sentenceId,
-      sentence: sentence ? sentence.content : 'NOT_FOUND',
-      filteredCount: this.data.filteredSentences.length,
-      currentPlaying: this.data.currentPlayingId,
-      isPlaying: this.data.isPlaying
-    })
-    
-    if (!sentence) {
-      console.error('❌ 未找到句子:', sentenceId)
-      wx.showToast({
-        title: '句子不存在',
-        icon: 'none'
-      })
-      return
-    }
-    
-    // 如果正在播放相同句子，则停止播放
-    if (this.data.currentPlayingId === sentenceId && this.data.isPlaying) {
-      console.log('🔊 停止当前播放')
-      this.stopPlaying()
-      return
-    }
-    
-    try {
-      // 停止之前的播放
-      if (this.data.isPlaying) {
-        console.log('🔊 停止之前的播放')
-        this.stopPlaying()
-      }
-      
-      // 开始播放
-      this.setData({
-        currentPlayingId: sentenceId,
-        isPlaying: true
-      })
-      
-      console.log(`🔊 开始播放句子: ${sentence.content}`)
-      
-      // 检查TTS服务状态
-      if (typeof ttsService.playText !== 'function') {
-        throw new Error('TTS服务未正确初始化')
-      }
-      
-      await ttsService.playText(sentence.content)
-      
-      console.log('🔊 播放完成')
-      
-      // 播放完成
-      this.setData({
-        currentPlayingId: null,
-        isPlaying: false
-      })
-      
-    } catch (error) {
-      console.error('❌ 播放失败:', error)
-      
-      this.setData({
-        currentPlayingId: null,
-        isPlaying: false
-      })
-      
-      wx.showToast({
-        title: `播放失败: ${error.message}`,
-        icon: 'none',
-        duration: 3000
-      })
-    }
-  },
+  /**
+   * TTS播放控制
+   */
+  async handlePlayTTS(e) {
+    const { id, content } = e.currentTarget.dataset;
 
-  // 停止播放
-  stopPlaying() {
-    console.log('🔊 stopPlaying 被调用')
-    
-    try {
-      ttsService.stopPlay()
-      console.log('🔊 TTS服务停止成功')
-    } catch (error) {
-      console.error('❌ 停止播放失败:', error)
-    }
-    
-    this.setData({
-      currentPlayingId: null,
-      isPlaying: false
-    })
-    
-    console.log('🔊 播放状态已重置')
-  },
+    if (this.data.currentPlayingId === id) {
+      // 如果点击的是正在播放的句子，则停止
+      ttsService.stopCurrent();
+      this.setData({ currentPlayingId: null });
+    } else {
+      // 停止当前可能正在播放的任何其他句子
+      ttsService.stopCurrent();
+      
+      this.setData({ currentPlayingId: id });
 
-  // 练习句子
-  practiceSentence(e) {
-    // 立即提供视觉反馈
-    wx.showToast({
-      title: '正在跳转...',
-      icon: 'loading',
-      duration: 500
-    })
-    
-    console.log('🎤 practiceSentence 被调用:', e)
-    
-    const sentenceId = e.currentTarget.dataset.id
-    const sentence = this.data.filteredSentences.find(s => s.id === sentenceId)
-    
-    console.log('🎤 练习参数:', {
-      sentenceId,
-      sentence: sentence ? sentence.content : 'NOT_FOUND',
-      filteredCount: this.data.filteredSentences.length
-    })
-    
-    if (!sentence) {
-      console.error('❌ 未找到句子:', sentenceId)
-      wx.showToast({
-        title: '句子不存在',
-        icon: 'none'
-      })
-      return
-    }
-    
-    console.log(`🎤 准备跳转到练习页面: ${sentence.content}`)
-    
-    // 跳转到练习页面，并传递句子ID
-    wx.navigateTo({
-      url: `/pages/index/index?sentenceId=${sentenceId}`,
-      success: () => {
-        console.log('🎤 页面跳转成功')
-      },
-      fail: (error) => {
-        console.error('❌ 页面跳转失败:', error)
+      try {
+        await ttsService.playText(content, {
+          onEnded: () => {
+            // 播放正常结束后，清除播放状态
+            if (this.data.currentPlayingId === id) {
+              this.setData({ currentPlayingId: null });
+            }
+          },
+          onError: () => {
+             // 播放出错后，清除播放状态
+            if (this.data.currentPlayingId === id) {
+              this.setData({ currentPlayingId: null });
+            }
+          }
+        });
+      } catch (error) {
+        // 如果调用本身就失败了，也清除状态
+        this.setData({ currentPlayingId: null });
         wx.showToast({
-          title: '跳转失败',
+          title: '播放失败，请稍后重试',
           icon: 'none'
         })
       }
-    })
+    }
   },
 
-  // 查看句子详情
+  /**
+   * 跳转到练习页面
+   */
+  handleGoToPractice(e) {
+    const { id } = e.currentTarget.dataset;
+    if (!id) return;
+
+    // 使用 globalData 在 tabbar 页面间传递数据
+    const app = getApp()
+    app.globalData.practiceTargetId = id;
+
+    // 跳转到练习Tab页
+    wx.switchTab({
+      url: '/pages/index/index',
+      success: () => {
+      },
+      fail: (err) => {
+        // 清理全局变量，防止状态污染
+        app.globalData.practiceTargetId = null;
+        wx.showToast({
+          title: '跳转失败，请重试',
+          icon: 'none'
+        })
+      }
+    });
+  },
+
+  /**
+   * 查看句子详情（长按触发）
+   */
   viewSentenceDetail(e) {
-    const sentenceId = e.currentTarget.dataset.id
-    const sentence = this.data.filteredSentences.find(s => s.id === sentenceId)
-    
-    if (!sentence) return
-    
-    const practiceInfo = sentence.isPracticed 
-      ? `练习次数: ${sentence.practiceCount}\n最佳评分: ${sentence.bestQuality}分`
-      : '尚未练习'
-    
-    wx.showModal({
-      title: '句子详情',
-      content: `${sentence.content}\n\n${sentence.translation}\n\n分类: ${sentence.category}\n难度: ${sentence.difficultyStars}\n\n${practiceInfo}`,
-      showCancel: false,
-      confirmText: '确定'
-    })
+    const { id } = e.currentTarget.dataset;
+    const sentence = this.data.allSentences.find(s => s.id === id);
+
+    if (sentence) {
+      if (this.detailModal) {
+        this.detailModal.showModal(sentence);
+      } else {
+        // Fallback to old modal if component not ready
+        wx.showModal({
+          title: '练习详情',
+          content: `句子：${sentence.content}\n分类：${sentence.category}\n难度：${sentence.difficulty}`,
+          showCancel: false,
+          confirmText: '确定'
+        });
+      }
+    }
   },
 
   // 清除筛选
@@ -468,9 +383,19 @@ Page({
     })
   },
 
-  // 页面卸载时清理
+  onHide() {
+    // 页面隐藏时停止播放
+    if (this.data.currentPlayingId) {
+      ttsService.stopCurrent();
+      this.setData({ currentPlayingId: null });
+    }
+  },
+
   onUnload() {
-    // 停止播放
-    this.stopPlaying()
+    // 页面卸载时停止播放
+    if (this.data.currentPlayingId) {
+      ttsService.stopCurrent();
+      this.setData({ currentPlayingId: null });
+    }
   }
 }) 

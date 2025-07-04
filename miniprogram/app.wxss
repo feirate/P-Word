@@ -1,5 +1,5 @@
 /**app.wxss**/
-/* 全局样式 - 多邻国风格设计 */
+/* 全局样式 - 现代化游戏风格设计 */
 
 /* 主题色彩定义 */
 page {
@@ -17,7 +17,7 @@ page {
   --border-color: rgba(0, 0, 0, 0.05);
   --shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.1);
   
-  /* 字体大小 - 多邻国风格 */
+  /* 字体大小 - 专业级风格 */
   --font-size-xs: 24rpx;
   --font-size-sm: 28rpx;
   --font-size-base: 32rpx;
@@ -52,7 +52,7 @@ view, text, button, input, textarea, image, scroll-view {
   box-sizing: border-box;
 }
 
-/* 全局字体设置 - 多邻国黑体风格 */
+/* 全局字体设置 - 现代化专业风格 */
 page {
   background-color: var(--bg-color);
   font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', 'Microsoft YaHei', 'Noto Sans CJK SC', sans-serif;
@@ -100,7 +100,7 @@ page {
   margin-bottom: var(--spacing-base);
 }
 
-/* 按钮样式 - 多邻国风格 */
+/* 按钮样式 - 现代化游戏风格 */
 .btn {
   display: inline-flex;
   align-items: center;

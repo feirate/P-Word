@@ -1,6 +1,8 @@
 {
   "usingComponents": {
-    "icon": "../../components/icon/icon"
+    "icon": "../../components/icon/icon",
+    "detail-modal": "../../components/detail-modal/detail-modal"
   },
+  "enablePullDownRefresh": true,
   "navigationBarTitleText": "语料库"
 } 

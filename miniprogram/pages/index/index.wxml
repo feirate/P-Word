@@ -110,7 +110,7 @@
       </view>
     </view>
 
-    <!-- 多邻国风格录音区域 -->
+    <!-- 游戏化风格录音区域 -->
     <view class="duolingo-record-area" bindtap="toggleRecordArea">
       <!-- 未录音状态 - 显示提示 -->
       <view class="record-prompt" wx:if="{{!isRecording && !hasRecording}}">

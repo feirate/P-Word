@@ -1,6 +1,6 @@
 /**index.wxss**/
 
-/* 全局字体设置 - 多邻国风格黑体 */
+/* 全局字体设置 - 现代化专业风格 */
 page {
   font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', 'Microsoft YaHei', sans-serif;
   font-weight: 500;
@@ -333,7 +333,7 @@ page {
   transform: scale(0.95);
 }
 
-/* 多邻国风格录音区域 */
+/* 游戏化风格录音区域 */
 .duolingo-record-area {
   margin-bottom: 32rpx;
   padding: 32rpx 24rpx;

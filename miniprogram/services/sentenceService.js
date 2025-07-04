@@ -890,6 +890,40 @@ class SentenceService {
   }
 
   /**
+   * 重置今日统计数据（供设置页面调用）
+   */
+  resetTodayStats() {
+    logger.info('SENTENCE', '重置今日统计数据')
+    
+    const todayKey = new Date().toISOString().split('T')[0]
+    
+    // 从 practiceHistory 中移除今天的记录
+    this.practiceHistory = this.practiceHistory.filter(record => {
+      // 假设 record.timestamp 是一个时间戳
+      if (!record.timestamp) return true // 保留没有时间戳的旧数据
+      const recordDate = new Date(record.timestamp).toISOString().split('T')[0]
+      return recordDate !== todayKey
+    })
+    
+    // 更新缓存
+    security.secureStorage('practice_history', this.practiceHistory)
+    
+    // 清除今日统计的缓存（如果有）
+    if (this.todayStats && this.todayStats.date === todayKey) {
+      this.todayStats = null
+    }
+
+    // 同时清除 storage 中的 practice_stats，确保同步
+    try {
+      wx.removeStorageSync('practice_stats')
+    } catch (e) {
+      logger.warn('SENTENCE', '清除 practice_stats 缓存失败:', e)
+    }
+
+    logger.info('SENTENCE', '今日统计数据已成功重置')
+  }
+
+  /**
    * 获取所有可用的分类
    * @returns {Array} 分类列表
    */
@@ -947,6 +981,16 @@ class SentenceService {
    */
   getAllSentences() {
     return this.sentences
+  }
+
+  /**
+   * 根据ID获取句子
+   * @param {string} id 句子ID
+   * @returns {Object|null} 找到的句子对象或null
+   */
+  getSentenceById(id) {
+    if (!id) return null;
+    return this.sentences.find(s => s.id === id) || null;
   }
 }
 

@@ -181,7 +181,6 @@ class SecurityService {
 
       // 6. 尝试解析JSON
       const parsed = JSON.parse(decrypted)
-      console.log('✅ 数据解密成功')
       return parsed
     } catch (error) {
       console.error('数据解密失败:', {
@@ -217,7 +216,6 @@ class SecurityService {
         timestamp: Date.now()
       })
       
-      console.log(`✅ 安全存储成功: ${key} (加密: ${isSensitive})`)
     } catch (error) {
       console.error('安全存储失败:', error)
     }
@@ -275,7 +273,6 @@ class SecurityService {
       try {
         if (typeof wx !== 'undefined') {
           wx.removeStorageSync(key)
-          console.log(`🗑️ 已清理有问题的数据: ${key}`)
         }
       } catch (e) {
         // 忽略清除错误
@@ -376,7 +373,6 @@ class SecurityService {
           const stored = wx.getStorageSync(key)
           if (stored && stored.timestamp && (now - stored.timestamp) > maxAge) {
             wx.removeStorageSync(key)
-            console.log(`🗑️ 清理过期数据: ${key}`)
           }
         } catch (error) {
           // 忽略单个数据清理错误
@@ -430,7 +426,7 @@ class SecurityService {
       })
       
       if (cleanedCount > 0) {
-        console.log(`✅ 清理了 ${cleanedCount} 个损坏的数据项`)
+        console.warn(`✅ 清理了 ${cleanedCount} 个损坏的数据项`)
       }
     } catch (error) {
       console.error('清理损坏数据失败:', error)
