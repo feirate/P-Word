@@ -64,8 +64,7 @@
           
           <!-- 朗读按钮 -->
           <view class="tts-button {{isTTSPlaying ? 'playing' : ''}}" 
-                bindtap="playTextToSpeech"
-                bindlongpress="showTTSDebugPanel">
+                bindtap="playTextToSpeech">
             <icon 
               name="{{isTTSPlaying ? 'volume-on' : 'volume-off'}}" 
               size="32" 

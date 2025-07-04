@@ -4,8 +4,7 @@
     "pages/history/history",
     "pages/library/library",
     "pages/settings/settings",
-    "pages/privacy/privacy",
-    "pages/demo/demo"
+    "pages/privacy/privacy"
   ],
   "window": {
     "backgroundTextStyle": "light",

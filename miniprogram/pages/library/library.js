@@ -472,14 +472,5 @@ Page({
   onUnload() {
     // 停止播放
     this.stopPlaying()
-  },
-  
-  // 测试按钮点击事件
-  testButtonClick() {
-    console.log('🧪 测试按钮被点击')
-    wx.showToast({
-      title: '按钮点击正常',
-      icon: 'success'
-    })
   }
 }) 

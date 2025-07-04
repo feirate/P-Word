@@ -280,34 +280,6 @@ Page({
     })
   },
 
-  // 测试TTS功能
-  testTTS() {
-    const testText = "Hello, this is a test of the text-to-speech feature."
-    
-    if (this.data.isTTSPlaying) {
-      ttsService.stopCurrent()
-      this.setData({ isTTSPlaying: false })
-      return
-    }
-    
-    this.setData({ isTTSPlaying: true })
-    
-    ttsService.playText(testText, {
-      rate: this.data.ttsRate,
-      volume: this.data.ttsVolume
-    }).then((result) => {
-      console.log('TTS测试完成:', result)
-    }).catch((error) => {
-      console.error('TTS测试失败:', error)
-      wx.showToast({
-        title: 'TTS功能不可用',
-        icon: 'none'
-      })
-    }).finally(() => {
-      this.setData({ isTTSPlaying: false })
-    })
-  },
-
   // 每日目标改变
   onGoalChange(e) {
     const goalIndex = parseInt(e.detail.value)

@@ -17,11 +17,6 @@
       </view>
     </view>
     
-    <!-- 测试按钮 -->
-    <button class="test-btn" bindtap="testButtonClick" style="margin: 20rpx 0; background: #ff4444; color: white;">
-      测试按钮点击
-    </button>
-    
     <!-- 统计概览 -->
     <view class="stats-overview">
       <view class="stat-card">

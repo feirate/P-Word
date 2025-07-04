@@ -5,8 +5,10 @@
 
 class LogService {
   constructor() {
-    this.logLevel = 'debug' // 可选: 'error', 'warn', 'info', 'debug'
+    this.logLevel = 'warn' // 可选: 'error', 'warn', 'info', 'debug'
     this.enableConsole = true
+    this.logs = []
+    this.maxLogSize = 100
   }
 
   /**

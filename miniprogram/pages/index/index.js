@@ -44,12 +44,13 @@ Page({
     showSyncIndicator: false,
     
     // 录音相关
-    isRecording: false,
-    hasRecording: false,
-    recordAuth: false,
-    recordDuration: 0,
-    recordDurationText: '00:00',
-    audioPath: '',
+          isRecording: false,
+      hasRecording: false,
+      recordAuth: false,
+      isAudioServiceReady: false,
+      recordDuration: 0,
+      recordDurationText: '00:00',
+      audioPath: '',
     
     // 波形相关
     canvasWidth: 0,
@@ -83,10 +84,14 @@ Page({
     
     // 录音播放状态
     isPlaying: false,            // 录音播放状态
+    isAudioServiceReady: false,  // 音频服务是否已初始化
   },
 
+  isUnloaded: false, // 页面是否已销毁的标志
+  setupCanvasTimer: null, // 用于跟踪Canvas初始化的定时器
+
   async onLoad() {
-    console.log('📱 练习页面加载')
+    // console.log('📱 练习页面加载')
     
     // 【安全】清理过期数据
     security.cleanExpiredData()
@@ -100,9 +105,9 @@ Page({
     // 注意：checkRecordAuth内部已经会在权限存在时初始化音频服务
     // 这里只需要记录状态即可
     if (hasRecordAuth) {
-      console.log('✅ 录音权限检查完成，音频服务已初始化')
+      // console.log('✅ 录音权限检查完成，音频服务已初始化')
     } else {
-      console.log('⚠️ 暂无录音权限，等待用户授权后再初始化音频服务')
+      // console.log('⚠️ 暂无录音权限，等待用户授权后再初始化音频服务')
     }
     
     // 初始化Canvas
@@ -127,47 +132,41 @@ Page({
     
     // 加载每日目标设置
     this.loadDailyGoalSettings()
-    
-    // 初始化TTS权限（延迟执行，避免阻塞页面）
-    setTimeout(() => {
-      this.initTTSPermissions()
-    }, 1000)
+
+    // console.log('🔐 开始初始化TTS权限')
+    this.initTTSPermissions().then(() => {
+      // console.log('✅ TTS权限初始化完成')
+    })
   },
 
   // 初始化TTS权限
   async initTTSPermissions() {
     try {
-      console.log('🔐 开始初始化TTS权限')
+      // console.log('🔐 开始初始化TTS权限')
       await ttsService.requestPermissions()
-      console.log('✅ TTS权限初始化完成')
+      // console.log('✅ TTS权限初始化完成')
     } catch (error) {
       console.warn('⚠️ TTS权限初始化失败:', error)
     }
   },
 
-  onShow() {
-    // 页面显示时更新数据
+  onShow: function() {
+    // console.log('👋 练习页面显示')
     this.loadTodayStats()
   },
 
   // 初始化页面数据（性能优化版）
   initPageData() {
-    // 性能监控：记录初始化开始时间
-    const initStartTime = Date.now()
-    
+    // console.log('📝 初始化页面数据')
     const date = new Date()
     const month = (date.getMonth() + 1).toString().padStart(2, '0')
     const day = date.getDate().toString().padStart(2, '0')
     const currentDate = `${month}.${day}`
     this.setData({ currentDate })
     
-    // 性能监控：记录初始化完成时间
-    const initTime = Date.now() - initStartTime
-    console.log(`⚡ 页面数据初始化耗时: ${initTime}ms`)
-    
     // 存储性能指标
     this.performanceMetrics = {
-      initTime,
+      initTime: 0,
       renderTimes: [],
       startTime: Date.now()
     }
@@ -189,10 +188,15 @@ Page({
         authSetting: result.authSetting
       })
       
+      // console.log('🔍 录音权限检查结果:', {
+      //   authorized: recordAuth,
+      //   authSetting: result.authSetting
+      // })
+
       if (!recordAuth) {
-        console.log('⚠️ 录音权限未授权，需要用户主动申请')
+        // console.log('⚠️ 录音权限未授权，需要用户主动申请')
       } else {
-        console.log('✅ 录音权限已授权')
+        // console.log('✅ 录音权限已授权')
         // 权限已授权，初始化音频服务
         this.initAudioService()
       }
@@ -207,6 +211,8 @@ Page({
 
   // 初始化高质量录音服务
   initAudioService() {
+    console.log('🎤 初始化音频服务')
+    
     // 设置录音服务事件回调
     audioService.setEventHandlers({
       onRecordStart: () => {
@@ -216,12 +222,11 @@ Page({
           recordDuration: 0,
           waveData: [],
           audioQuality: null
+        }, () => {
+          // 【终极修复】在setData回调中直接调用setupCanvas，确保节点已渲染
+          console.log('🎨 Canvas容器已显示，开始设置Canvas...')
+          this.setupCanvas()
         })
-        
-        // 确保Canvas已初始化（因为现在Canvas会显示）
-        setTimeout(() => {
-          this.ensureCanvasInitialized()
-        }, 50)
         
         this.startRecordTimer()
       },
@@ -294,6 +299,10 @@ Page({
         })
       }
     })
+    
+    // 设置音频服务已初始化标志
+    this.setData({ isAudioServiceReady: true })
+    console.log('✅ 音频服务初始化完成')
   },
 
   // 初始化Canvas（按需初始化）
@@ -305,8 +314,14 @@ Page({
 
   // 设置Canvas（增强错误处理）
   setupCanvas() {
-    const query = this.createSelectorQuery()
-    query.select('#waveCanvas').boundingClientRect((rect) => {
+    this.createSelectorQuery().select('#waveCanvas').boundingClientRect().exec((res) => {
+      // 【安全守卫】如果页面已销毁，则中止执行，防止在销毁的页面上调用setData
+      if (this.isUnloaded) {
+        console.warn('🎨 Canvas Setup Aborted: Page is already unloaded.')
+        return
+      }
+
+      const rect = res[0];
       if (rect && rect.width > 0 && rect.height > 0) {
         this.setData({
           canvasWidth: rect.width,
@@ -335,7 +350,8 @@ Page({
         if (this.canvasInitRetries < maxRetries) {
           console.log(`🔄 Canvas重试 ${this.canvasInitRetries}/${maxRetries}`)
           // 延迟重试
-          setTimeout(() => {
+          if (this.setupCanvasTimer) clearTimeout(this.setupCanvasTimer)
+          this.setupCanvasTimer = setTimeout(() => {
             this.setupCanvas()
           }, 500 * this.canvasInitRetries) // 递增延迟时间
         } else {
@@ -348,19 +364,7 @@ Page({
           this.initCanvasContext()
         }
       }
-    }).exec()
-  },
-
-  // 确保Canvas已初始化（在需要时调用）
-  ensureCanvasInitialized() {
-    if (!this.data.canvasWidth || this.data.canvasWidth === 0) {
-      console.log('🎨 按需初始化Canvas')
-      this.canvasInitRetries = 0
-      // 延迟一点时间确保DOM已渲染
-      setTimeout(() => {
-        this.setupCanvas()
-      }, 100)
-    }
+    })
   },
 
   // 初始化Canvas上下文
@@ -372,6 +376,7 @@ Page({
         if (res[0] && res[0].node) {
           this.canvasNode = res[0].node
           this.canvasContext = this.canvasNode.getContext('2d')
+          // console.log('✅ Canvas上下文初始化成功')
           console.log('✅ Canvas上下文初始化成功')
         } else {
           console.warn('⚠️ Canvas上下文获取失败，使用兼容模式')
@@ -383,12 +388,23 @@ Page({
   startRecording() {
     console.log('🎤 startRecording 被调用', {
       recordAuth: this.data.recordAuth,
+      isAudioServiceReady: this.data.isAudioServiceReady,
       isRecording: this.data.isRecording
     })
     
     if (!this.data.recordAuth) {
       console.log('❌ 没有录音权限，显示授权弹窗')
       this.showAuthModal()
+      return
+    }
+    
+    if (!this.data.isAudioServiceReady) {
+      console.log('❌ 音频服务未初始化，正在初始化...')
+      this.initAudioService()
+      // 延迟一点时间等待初始化完成
+      setTimeout(() => {
+        this.startRecording()
+      }, 100)
       return
     }
     
@@ -411,15 +427,10 @@ Page({
     
     if (this.data.isRecording) {
       const success = audioService.stopRecording()
-      console.log('🎤 录音停止结果:', success)
+      // console.log('🎤 录音停止结果:', success)
     } else {
-      console.log('⚠️ 当前没有录音进行中')
+      // console.log('⚠️ 当前没有录音进行中')
     }
-    
-    // 检查录音质量成就
-    setTimeout(() => {
-      this.checkTodayAchievements()
-    }, 1000)
   },
 
   // 播放录音（真机优化版）
@@ -918,8 +929,8 @@ Page({
       return
     }
     
-    // 确保Canvas已初始化
-    this.ensureCanvasInitialized()
+    // 【修复】移除对已废弃函数的调用。Canvas在录音开始时已保证初始化。
+    // this.ensureCanvasInitialized()
     
     // 使用与实时波形相同的绘制逻辑，但不包含动画
     this.createSelectorQuery()
@@ -1536,9 +1547,16 @@ Page({
 
   // 页面销毁时清理
   onUnload() {
+    // 设置页面已销毁标志，防止悬空的回调函数执行
+    this.isUnloaded = true
+
     // 清理定时器
     if (this.recordTimer) {
       clearInterval(this.recordTimer)
+    }
+    
+    if (this.setupCanvasTimer) {
+      clearTimeout(this.setupCanvasTimer)
     }
     
     // 清理同步指示器定时器
@@ -1664,11 +1682,11 @@ Page({
 
   // 多邻国风格录音区域点击处理
   toggleRecordArea() {
-    console.log('🎤 录音区域被点击', {
-      isRecording: this.data.isRecording,
-      hasRecording: this.data.hasRecording,
-      recordAuth: this.data.recordAuth
-    });
+    // console.log('🎤 录音区域被点击', {
+    //   isRecording: this.data.isRecording,
+    //   hasRecording: this.data.hasRecording,
+    //   hasRecordAuth: this.data.hasRecordAuth
+    // });
 
     // 如果正在录音，停止录音
     if (this.data.isRecording) {
