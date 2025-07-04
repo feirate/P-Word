@@ -86,8 +86,7 @@ Page({
   onShareAppMessage() {
     return {
       title: 'P-Word隐私政策 - 保护您的隐私安全',
-      path: '/pages/privacy/privacy',
-      imageUrl: '/assets/icons/app/share-privacy.png'
+      path: '/pages/privacy/privacy'
     }
   },
 
@@ -97,8 +96,7 @@ Page({
   onShareTimeline() {
     return {
       title: 'P-Word隐私政策 - 透明的隐私保护承诺',
-      query: '',
-      imageUrl: '/assets/icons/app/share-privacy.png'
+      query: ''
     }
   }
 }) 

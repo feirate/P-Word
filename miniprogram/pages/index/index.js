@@ -44,18 +44,13 @@ Page({
     showSyncIndicator: false,
     
     // 录音相关
-          isRecording: false,
-      hasRecording: false,
-      recordAuth: false,
-      isAudioServiceReady: false,
-      recordDuration: 0,
-      recordDurationText: '00:00',
-      audioPath: '',
-    
-    // 波形相关
-    canvasWidth: 0,
-    canvasHeight: 100, // 多邻国风格更高的波形区域
-    waveData: [],
+    isRecording: false,
+    hasRecording: false,
+    recordAuth: false,
+    isAudioServiceReady: false,
+    recordDuration: 0,
+    recordDurationText: '00:00',
+    audioPath: '',
     
     // 录音质量分析
     audioQuality: null,
@@ -88,7 +83,7 @@ Page({
   },
 
   isUnloaded: false, // 页面是否已销毁的标志
-  setupCanvasTimer: null, // 用于跟踪Canvas初始化的定时器
+  waveform: null, // 波形图组件实例
 
   async onLoad() {
     // console.log('📱 练习页面加载')
@@ -98,6 +93,9 @@ Page({
     
     // 初始化页面数据
     this.initPageData()
+    
+    // 获取波形图组件实例
+    this.waveform = this.selectComponent('#waveform');
     
     // 检查录音权限并等待结果
     const hasRecordAuth = await this.checkRecordAuth()
@@ -109,9 +107,6 @@ Page({
     } else {
       // console.log('⚠️ 暂无录音权限，等待用户授权后再初始化音频服务')
     }
-    
-    // 初始化Canvas
-    this.initCanvas()
     
     // 初始化语料库系统
     await this.initSentenceSystem()
@@ -216,172 +211,69 @@ Page({
     // 设置录音服务事件回调
     audioService.setEventHandlers({
       onRecordStart: () => {
-        console.log('🎤 高质量录音开始')
+        console.log('🎤 页面响应: 录音开始');
         this.setData({ 
           isRecording: true,
           recordDuration: 0,
-          waveData: [],
-          audioQuality: null
-        }, () => {
-          // 【终极修复】在setData回调中直接调用setupCanvas，确保节点已渲染
-          console.log('🎨 Canvas容器已显示，开始设置Canvas...')
-          this.setupCanvas()
-        })
-        
-        this.startRecordTimer()
+          audioQuality: null,
+          hasRecording: false,
+        });
+        if (this.waveform) {
+          this.waveform.start();
+        }
+        this.startRecordTimer();
       },
       
       onRecordStop: (result) => {
-        console.log('🎤 录音完成:', result)
+        console.log('🎤 页面响应: 录音完成');
         
-        // 停止动画和计时器
-        this.stopWaveformAnimation()
-        this.stopRecordTimer()
+        this.stopRecordTimer();
         
-        // 分析录音质量
-        const quality = audioService.analyzeAudioQuality()
+        const quality = audioService.analyzeAudioQuality();
         
         this.setData({
           isRecording: false,
           hasRecording: true,
           audioPath: result.tempFilePath,
           audioQuality: quality
-        })
-        
-        // 录音完成后，清理并重绘波形为静态状态
-        setTimeout(() => {
-          this.drawFinalWaveform()
-        }, 100)
-        
-        this.saveRecordingStats(result)
-        
-        // 显示录音质量提示
-        if (quality) {
-          this.showQualityFeedback(quality)
+        });
+
+        if (this.waveform) {
+          this.waveform.stop(result.waveformData);
         }
+        
+        this.saveRecordingStats(result);
       },
-      
+
       onFrameRecorded: (waveData) => {
-        this.updateWaveform(waveData)
+        if (this.waveform) {
+          this.waveform.pushData(waveData);
+        }
       },
       
       onRecordError: (error) => {
-        console.error('🎤 录音错误:', error)
-        this.setData({ isRecording: false })
-        
-        // 清理状态
-        this.stopWaveformAnimation()
-        this.stopRecordTimer()
-        
+        console.error('🎤 页面响应: 录音错误', error);
+        this.stopRecordTimer();
+        this.setData({ isRecording: false });
+        if (this.waveform) {
+          this.waveform.clear();
+        }
         wx.showToast({
           title: '录音失败，请重试',
-          icon: 'none',
-          duration: 2000
-        })
-      },
-      
-      onPlayStart: () => {
-        console.log('▶️ 开始播放录音')
-        this.setData({ isPlaying: true })
-      },
-      
-      onPlayEnd: () => {
-        console.log('⏹️ 播放结束')
-        this.setData({ isPlaying: false })
-      },
-      
-      onPlayError: (error) => {
-        console.error('❌ 播放失败:', error)
-        this.setData({ isPlaying: false })
-        wx.showToast({
-          title: '播放失败',
           icon: 'none'
-        })
+        });
+      },
+
+      onPlayStart: () => this.setData({ isPlaying: true }),
+      onPlayEnd: () => this.setData({ isPlaying: false }),
+      onPlayError: () => {
+        this.setData({ isPlaying: false });
+        wx.showToast({ title: '播放失败', icon: 'none' });
       }
-    })
-    
-    // 设置音频服务已初始化标志
-    this.setData({ isAudioServiceReady: true })
-    console.log('✅ 音频服务初始化完成')
-  },
+    });
 
-  // 初始化Canvas（按需初始化）
-  initCanvas() {
-    // Canvas只在录音状态下才会显示，所以不需要在页面加载时初始化
-    // 改为在开始录音时按需初始化
-    console.log('📝 Canvas将在录音时按需初始化')
-  },
-
-  // 设置Canvas（增强错误处理）
-  setupCanvas() {
-    this.createSelectorQuery().select('#waveCanvas').boundingClientRect().exec((res) => {
-      // 【安全守卫】如果页面已销毁，则中止执行，防止在销毁的页面上调用setData
-      if (this.isUnloaded) {
-        console.warn('🎨 Canvas Setup Aborted: Page is already unloaded.')
-        return
-      }
-
-      const rect = res[0];
-      if (rect && rect.width > 0 && rect.height > 0) {
-        this.setData({
-          canvasWidth: rect.width,
-          canvasHeight: rect.height
-        })
-        console.log(`✅ Canvas初始化成功: ${rect.width}x${rect.height}`)
-        
-        // 重置重试计数器
-        this.canvasInitRetries = 0
-        
-        // 初始化Canvas上下文
-        this.initCanvasContext()
-      } else {
-        console.warn('⚠️ Canvas节点获取失败，使用默认尺寸')
-        
-        // 使用默认尺寸
-        this.setData({
-          canvasWidth: 300,
-          canvasHeight: 100
-        })
-        
-        // 检查重试次数，避免无限重试
-        this.canvasInitRetries = (this.canvasInitRetries || 0) + 1
-        const maxRetries = 2
-        
-        if (this.canvasInitRetries < maxRetries) {
-          console.log(`🔄 Canvas重试 ${this.canvasInitRetries}/${maxRetries}`)
-          // 延迟重试
-          if (this.setupCanvasTimer) clearTimeout(this.setupCanvasTimer)
-          this.setupCanvasTimer = setTimeout(() => {
-            this.setupCanvas()
-          }, 500 * this.canvasInitRetries) // 递增延迟时间
-        } else {
-          console.warn(`⚠️ Canvas初始化重试${maxRetries}次后放弃，使用默认配置`)
-          // 使用默认配置，不再重试
-          this.setData({
-            canvasWidth: 300,
-            canvasHeight: 100
-          })
-          this.initCanvasContext()
-        }
-      }
-    })
-  },
-
-  // 初始化Canvas上下文
-  initCanvasContext() {
-    const query = this.createSelectorQuery()
-    query.select('#waveCanvas')
-      .fields({ node: true, size: true })
-      .exec((res) => {
-        if (res[0] && res[0].node) {
-          this.canvasNode = res[0].node
-          this.canvasContext = this.canvasNode.getContext('2d')
-          // console.log('✅ Canvas上下文初始化成功')
-          console.log('✅ Canvas上下文初始化成功')
-        } else {
-          console.warn('⚠️ Canvas上下文获取失败，使用兼容模式')
-        }
-      })
+    this.setData({ isAudioServiceReady: true });
+    // console.log('✅ 音频服务事件处理器已设置');
   },
 
   // 开始录音
@@ -472,31 +364,18 @@ Page({
 
   // 重新录音
   reRecord() {
-    console.log('🔄 重新录音，清理所有状态')
-    
-    // 停止所有动画和计时器
-    this.stopWaveformAnimation()
-    this.stopRecordTimer()
-    
-    // 清理录音服务状态
-    audioService.cleanup()
-    
-    // 重置所有相关状态
     this.setData({
       hasRecording: false,
       audioPath: '',
-      waveData: [],
-      audioQuality: null,
-      isRecording: false,
-      isPlaying: false,
       recordDuration: 0,
-      recordDurationText: '00:00'
-    })
-    
-    // 清空Canvas显示
-    setTimeout(() => {
-      this.clearCanvas()
-    }, 50)
+      recordDurationText: '00:00',
+      audioQuality: null,
+      isPlaying: false
+    });
+    if (this.waveform) {
+      this.waveform.clear();
+    }
+    audioService.stopPlaying();
   },
 
   // 清空Canvas显示
@@ -1498,15 +1377,20 @@ Page({
 
   // 手动触发同步
   async manualSync() {
-    const result = await cloudService.manualSync()
-    
-    if (result.success) {
-      // 更新同步状态
-      const syncStatus = cloudService.getSyncStatus()
-      this.setData({ syncStatus })
-      
-      // 重新加载语料库服务数据（如果有云端更新）
-      sentenceService.loadPracticeHistory()
+    this.showSyncIndicator('syncing');
+    try {
+      const result = await cloudService.manualSync();
+      if (result.success) {
+        this.showSyncIndicator('success');
+        const syncStatus = cloudService.getSyncStatus();
+        this.setData({ syncStatus });
+        sentenceService.loadPracticeHistory();
+      } else {
+        throw new Error(result.error || '同步失败，但未返回明确错误');
+      }
+    } catch (error) {
+      console.error('❌ 手动同步失败:', error);
+      this.showSyncIndicator('failed');
     }
   },
 
@@ -1547,41 +1431,32 @@ Page({
 
   // 页面销毁时清理
   onUnload() {
-    // 设置页面已销毁标志，防止悬空的回调函数执行
-    this.isUnloaded = true
+    console.log('💀 练习页面销毁');
+    this.isUnloaded = true;
+    
+    // 停止所有正在进行的活动
+    this.stopRecordTimer();
+    
+    if (this.data.isRecording) {
+      audioService.stopRecording();
+    }
+    if (this.data.isPlaying) {
+      audioService.stopPlaying();
+    }
+    if (this.data.isTTSPlaying) {
+      ttsService.stop();
+    }
+    
+    // 清理云同步服务的定时器
+    cloudService.cleanup();
 
-    // 清理定时器
-    if (this.recordTimer) {
-      clearInterval(this.recordTimer)
+    // 清理波形图组件
+    if (this.waveform) {
+      this.waveform.stopWaveformAnimation();
     }
-    
-    if (this.setupCanvasTimer) {
-      clearTimeout(this.setupCanvasTimer)
-    }
-    
-    // 清理同步指示器定时器
-    if (this.syncIndicatorTimer) {
-      clearTimeout(this.syncIndicatorTimer)
-    }
-    
-    // 清理波形动画定时器
-    this.stopWaveformAnimation()
-    
-    // 清理录音服务
-    audioService.cleanup()
-    
-    // 清理TTS服务资源
-    if (ttsService && ttsService.destroy) {
-      ttsService.destroy()
-    }
-    
-    // 【安全】清理临时文件（24小时后）
-    const tempFiles = wx.getStorageSync('temp_audio_files') || []
-    const now = Date.now()
-    const validFiles = tempFiles.filter(file => 
-      now - file.timestamp < 24 * 60 * 60 * 1000 // 24小时
-    )
-    wx.setStorageSync('temp_audio_files', validFiles)
+
+    // 重置服务状态
+    // audioService.cleanup()
   },
 
   // 初始化游戏化数据

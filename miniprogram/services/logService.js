@@ -5,10 +5,11 @@
 
 class LogService {
   constructor() {
-    this.logLevel = 'warn' // 可选: 'error', 'warn', 'info', 'debug'
-    this.enableConsole = true
-    this.logs = []
-    this.maxLogSize = 100
+    this.logLevels = { 'error': 0, 'warn': 1, 'info': 2, 'debug': 3 };
+    this.currentLogLevel = 'warn'; // 默认为 'warn'
+    this.enableConsole = true;
+    this.logs = [];
+    this.maxLogSize = 100;
   }
 
   /**
@@ -19,13 +20,13 @@ class LogService {
    * @param {any} data 附加数据
    */
   formatMessage(level, module, message, data) {
-    const timestamp = new Date().toISOString().substring(11, 23) // HH:mm:ss.SSS
-    const prefix = `[${timestamp}] [${level.toUpperCase()}] [${module}]`
+    const timestamp = new Date().toISOString().substring(11, 23); // HH:mm:ss.SSS
+    const prefix = `[${timestamp}] [${level.toUpperCase()}] [${module}]`;
     
     if (data !== undefined) {
-      return `${prefix} ${message}`, data
+      return [`${prefix} ${message}`, data]; // 修正：返回一个数组
     } else {
-      return `${prefix} ${message}`
+      return [`${prefix} ${message}`]; // 修正：返回一个数组
     }
   }
 
@@ -37,45 +38,27 @@ class LogService {
    * @param {any} data 附加数据
    */
   output(level, module, message, data) {
-    if (!this.enableConsole) return
+    if (!this.enableConsole || this.logLevels[level] > this.logLevels[this.currentLogLevel]) {
+      return; // 关键修复：根据日志级别过滤
+    }
 
-    const formatted = this.formatMessage(level, module, message, data)
+    const formatted = this.formatMessage(level, module, message, data);
     
     switch (level) {
       case 'error':
-        if (data !== undefined) {
-          console.error(formatted[0], formatted[1])
-        } else {
-          console.error(formatted)
-        }
-        break
+        console.error(...formatted);
+        break;
       case 'warn':
-        if (data !== undefined) {
-          console.warn(formatted[0], formatted[1])
-        } else {
-          console.warn(formatted)
-        }
-        break
+        console.warn(...formatted);
+        break;
       case 'info':
-        if (data !== undefined) {
-          console.log(formatted[0], formatted[1])
-        } else {
-          console.log(formatted)
-        }
-        break
+        console.log(...formatted);
+        break;
       case 'debug':
-        if (data !== undefined) {
-          console.log(formatted[0], formatted[1])
-        } else {
-          console.log(formatted)
-        }
-        break
+        console.debug(...formatted); // 使用 console.debug
+        break;
       default:
-        if (data !== undefined) {
-          console.log(formatted[0], formatted[1])
-        } else {
-          console.log(formatted)
-        }
+        console.log(...formatted);
     }
   }
 
@@ -124,7 +107,7 @@ class LogService {
    * @param {string} level 日志级别
    */
   setLogLevel(level) {
-    this.logLevel = level
+    this.currentLogLevel = level;
   }
 
   /**

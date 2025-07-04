@@ -1,7 +1,21 @@
+const { logService } = require('./services/logService')
+
 //app.js
 App({
   onLaunch() {
     console.log('🎙️ P-Word 小程序启动')
+    
+    // 根据环境设置日志级别
+    const accountInfo = wx.getAccountInfoSync();
+    if (accountInfo.miniProgram.envVersion === 'release') {
+      logService.setLogLevel('warn');
+      console.log = () => {}; // 生产环境禁用console.log
+      console.debug = () => {};
+    } else {
+      logService.setLogLevel('debug');
+    }
+    
+    logService.info('App', `小程序启动，环境: ${accountInfo.miniProgram.envVersion}`);
     
     // 初始化云开发
     if (wx.cloud) {

@@ -1,5 +1,7 @@
 {
   "usingComponents": {
-    "icon": "../../components/icon/icon"
-  }
+    "icon": "../../components/icon/icon",
+    "waveform": "../../components/waveform/waveform"
+  },
+  "navigationBarTitleText": "P-Word 口语练习"
 }

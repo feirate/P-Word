@@ -38,6 +38,11 @@
       }
     ]
   },
+  "permission": {
+    "scope.record": {
+      "desc": "您的录音将用于语音评测"
+    }
+  },
   "sitemapLocation": "sitemap.json",
   "style": "v2",
   "lazyCodeLoading": "requiredComponents"
