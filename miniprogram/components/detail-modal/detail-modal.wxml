@@ -1,0 +1,43 @@
+<!--components/detail-modal/detail-modal.wxml-->
+<view class="modal-mask" wx:if="{{show}}" bindtap="hideModal">
+  <view class="modal-container" catchtap>
+    <!-- 标题 -->
+    <view class="modal-header">
+      <icon name="info" size="22" color="#2196F3"></icon>
+      <text class="modal-title">{{title}}</text>
+    </view>
+
+    <!-- 内容 -->
+    <view class="modal-content">
+      <view class="detail-item">
+        <text class="detail-label">句子</text>
+        <text class="detail-value sentence-content">{{details.content}}</text>
+      </view>
+      <view class="detail-item">
+        <text class="detail-label">分类</text>
+        <text class="detail-value">{{details.category}}</text>
+      </view>
+      <view class="detail-item">
+        <text class="detail-label">难度</text>
+        <view class="detail-value difficulty-stars">
+          <text class="stars">{{details.difficultyStars}}</text>
+        </view>
+      </view>
+      <view class="detail-item">
+        <text class="detail-label">最佳得分</text>
+        <text class="detail-value score">{{details.bestQuality > 0 ? details.bestQuality + '分' : '暂无'}}</text>
+      </view>
+       <view class="detail-item">
+        <text class="detail-label">练习次数</text>
+        <text class="detail-value">{{details.practiceCount}}次</text>
+      </view>
+    </view>
+
+    <!-- 操作按钮 -->
+    <view class="modal-footer">
+      <view class="confirm-btn" bindtap="hideModal">
+        <text>确定</text>
+      </view>
+    </view>
+  </view>
+</view> 

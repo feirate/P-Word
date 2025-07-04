@@ -1,0 +1,106 @@
+/* miniprogram/components/waveform/waveform.wxss */
+
+/* 波形Canvas容器 */
+.wave-canvas-container {
+  position: relative;
+  background: #F3F4F6;
+  border-radius: 16rpx;
+  overflow: hidden;
+  margin-bottom: 16rpx;
+  width: 100%; /* 组件内部自适应宽度 */
+}
+
+.duolingo-wave-canvas {
+  width: 100%;
+  height: 100rpx;
+  display: block;
+}
+
+/* 录音中的波形动画遮罩 */
+.wave-pulse-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4rpx;
+  background: rgba(88, 204, 2, 0.1);
+  pointer-events: none; /* 允许点击穿透 */
+}
+
+.pulse-bar {
+  width: 6rpx;
+  height: 20rpx;
+  background: #58CC02;
+  border-radius: 3rpx;
+  animation: barPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes barPulse {
+  0%, 100% { 
+    height: 20rpx; 
+    opacity: 0.6;
+  }
+  50% { 
+    height: 60rpx; 
+    opacity: 1;
+  }
+}
+
+.wave-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24rpx;
+}
+
+.record-status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.status-dot {
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: 50%;
+  background: #E5E7EB;
+}
+
+.status-dot.recording {
+  background: #FF4B4B;
+  animation: recordingPulse 1s ease-in-out infinite;
+}
+
+.status-dot.recorded {
+  background: #58CC02;
+}
+
+@keyframes recordingPulse {
+  0%, 100% { 
+    transform: scale(1); 
+    opacity: 1;
+  }
+  50% { 
+    transform: scale(1.2); 
+    opacity: 0.7;
+  }
+}
+
+.status-text {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #374151;
+}
+
+.record-duration {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #6B7280;
+  background: rgba(107, 114, 128, 0.1);
+  padding: 8rpx 16rpx;
+  border-radius: 12rpx;
+} 

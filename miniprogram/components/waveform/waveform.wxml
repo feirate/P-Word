@@ -1,0 +1,16 @@
+<!--miniprogram/components/waveform/waveform.wxml-->
+<view class="wave-canvas-container">
+  <canvas 
+    type="2d"
+    canvas-id="waveCanvas" 
+    id="waveCanvas"
+    class="duolingo-wave-canvas"
+    style="width: {{canvasWidth}}px; height: {{canvasHeight}}px;"
+  ></canvas>
+  
+  <!-- 录音中的波形动画遮罩 -->
+  <view class="wave-pulse-overlay" wx:if="{{isRecording}}">
+    <view class="pulse-bar" wx:for="{{[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]}}" wx:key="*this" 
+          style="animation-delay: {{index * 0.1}}s"></view>
+  </view>
+</view> 
